@@ -1,0 +1,31 @@
+﻿<Application x:Class="MapEditor.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             StartupUri="MainWindow.xaml">
+    <Application.Resources>
+        <Image x:Key="RESOURCES" Source="Images/Bonus/resources.png" />
+        <Image x:Key="COAST" Source="Images/Terrain/coast.png" />
+        <Image x:Key="DESERT" Source="Images/Terrain/desert.png" />
+        <Image x:Key="DESERT_HILL" Source="Images/Terrain/DESERT_HILL.png" />
+        <Image x:Key="GRASS" Source="Images/Terrain/grass.png" />
+        <Image x:Key="GRASS_FOREST" Source="Images/Terrain/GRASS_FOREST.png" />
+        <Image x:Key="GRASS_FOREST_HILL" Source="Images/Terrain/GRASS_FOREST_HILL.png" />
+        <Image x:Key="GRASS_HILL" Source="Images/Terrain/GRASS_HILL.png" />
+        <Image x:Key="ICE" Source="Images/Terrain/ICE.png" />
+        <Image x:Key="JUNGLE" Source="Images/Terrain/JUNGLE.png" />
+        <Image x:Key="JUNGLE_HILL" Source="Images/Terrain/JUNGLE_HILL.png" />
+        <Image x:Key="OASIS" Source="Images/Terrain/OASIS.png" />
+        <Image x:Key="OCEAN" Source="Images/Terrain/OCEAN.png" />
+        <Image x:Key="PEAK" Source="Images/Terrain/PEAK.png" />
+        <Image x:Key="PLAINS" Source="Images/Terrain/PLAINS.png" />
+        <Image x:Key="PLAINS_FOREST" Source="Images/Terrain/PLAINS_FOREST.png" />
+        <Image x:Key="PLAINS_FOREST_HILL" Source="Images/Terrain/PLAINS_FOREST_HILL.png" />
+        <Image x:Key="PLAINS_HILL" Source="Images/Terrain/PLAINS_HILL.png" />
+        <Image x:Key="SNOW" Source="Images/Terrain/SNOW.png" />
+        <Image x:Key="SNOW_HILL" Source="Images/Terrain/SNOW_HILL.png" />
+        <Image x:Key="TUNDRA" Source="Images/Terrain/TUNDRA.png" />
+        <Image x:Key="TUNDRA_FOREST" Source="Images/Terrain/TUNDRA_FOREST.png" />
+        <Image x:Key="TUNDRA_FOREST_HILL" Source="Images/Terrain/TUNDRA_FOREST_HILL.png" />
+        <Image x:Key="TUNDRA_HILL" Source="Images/Terrain/TUNDRA_HILL.png" />
+    </Application.Resources>
+</Application>

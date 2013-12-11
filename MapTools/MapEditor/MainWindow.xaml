@@ -1,0 +1,121 @@
+﻿<Window x:Class="MapEditor.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="MapTuner" Height="600" Width="1200">
+    <StackPanel>
+        <StackPanel Orientation="Horizontal" Margin="0">
+            <Button Content="Open map" Height="20" HorizontalAlignment="Left" Margin="10,10,0,0"
+                Name="btnOpenMap" VerticalAlignment="Top" Width="88" Click="btnOpenMap_Click" />
+            <Button Content="Save map as" Height="20" HorizontalAlignment="Left" Margin="10,10,0,0"
+                Name="btnSaveMap" VerticalAlignment="Top" Width="88" Click="btnSaveMap_Click" />
+        </StackPanel>
+        <StackPanel Orientation="Horizontal" Margin="0">
+            <Button Content="Rotate CW" Height="20" HorizontalAlignment="Left" Margin="10,10,0,0"
+                Name="btnRotateCW" VerticalAlignment="Top" Width="88" Click="btnRotateCW_Click" />
+            <Button Content="Rotate CCW" Height="20" HorizontalAlignment="Left" Margin="10,10,0,0"
+                Name="btnRotateCCW" VerticalAlignment="Top" Width="88" Click="btnRotateCCW_Click" />
+            <Button Content="Rotate around top left corner" Height="20" HorizontalAlignment="Left" Margin="10,10,0,0" Name="btnRotateTopLeft" VerticalAlignment="Top" Click="btnRotateTopLeft_Click" />
+            <Button Content="Rotate around bottom left corner" Height="20" HorizontalAlignment="Left" Margin="10,10,0,0" Name="btnRotateBottomLeft" VerticalAlignment="Top" Click="btnRotateBottomLeft_Click" />
+            <Button Content="Rotate around top right corner" Height="20" HorizontalAlignment="Left" Margin="10,10,0,0" Name="btnRotateTopRight" VerticalAlignment="Top" Click="btnRotateTopRight_Click" />
+            <Button Content="Rotate around bottom right corner" Height="20" HorizontalAlignment="Left" Margin="10,10,0,0" Name="btnRotateBottomRight" VerticalAlignment="Top" Click="btnRotateBottomRight_Click" />
+        </StackPanel>
+        <StackPanel Orientation="Horizontal" Margin="0">
+            <Button Content="Mirror on western edge" Height="20" HorizontalAlignment="Left" Margin="10,10,0,0"
+                Name="btnMirrorWest" VerticalAlignment="Top" Click="btnMirrorWest_Click" />
+            <Button Content="Mirror on eastern edge" Height="20" HorizontalAlignment="Left" Margin="10,10,0,0"
+                Name="btnMirrorEast" VerticalAlignment="Top" Click="btnMirrorEast_Click" />
+            <Button Content="Mirror on northern edge" Height="20" HorizontalAlignment="Left" Margin="10,10,0,0"
+                Name="btnMirrorNorth" VerticalAlignment="Top" Click="btnMirrorNorth_Click" />
+            <Button Content="Mirror on southern edge" Height="20" HorizontalAlignment="Left" Margin="10,10,0,0"
+                Name="btnMirrorSouth" VerticalAlignment="Top" Click="btnMirrorSouth_Click" />
+        </StackPanel>
+        <StackPanel Orientation="Horizontal" Margin="0">
+            <Button Content="Clear selection" Height="20" HorizontalAlignment="Left" Margin="10,10,0,0" Name="btnClearSelection" VerticalAlignment="Top" Click="btnClearSelection_Click" />
+            <Button Content="Scramble selection" Height="20" HorizontalAlignment="Left" Margin="10,10,10,0" Name="btnScrambleSelection" VerticalAlignment="Top" Click="btnScrambleSelection_Click" />
+            <TextBlock Text="displacing tiles at most" VerticalAlignment="Bottom"></TextBlock>
+            <TextBox Name="txtMaxScrambleDistance" Margin="5,10,0,0" Text="3" Width="30" Height="20" VerticalAlignment="Bottom"></TextBox>
+            <TextBlock Text="tiles" VerticalAlignment="Bottom"></TextBlock>
+            <CheckBox Height="16" Margin="10,10,0,0" VerticalContentAlignment="Center" Name="chkDontScrambleWater" Content="Don't scramble water" IsChecked="True" />
+        </StackPanel>
+        <StackPanel Orientation="Horizontal" Margin="0">
+            <Button Content="Crop to selection" Height="20" HorizontalAlignment="Left" Margin="10,10,0,0" Name="btnCropToSelection" VerticalAlignment="Top" Click="btnCropToSelection_Click" />
+            <Button Content="Resize to" Height="20" HorizontalAlignment="Left" Margin="10,10,0,0" Name="btnResize" VerticalAlignment="Top" Click="btnResize_Click" />
+            <TextBox Name="txtResizeWidth" Margin="10,10,0,0" Text="100" Width="60" Height="20" VerticalAlignment="Bottom"></TextBox>
+            <TextBlock Text="X" VerticalAlignment="Bottom"></TextBlock>
+            <TextBox Name="txtResizeHeight" Text="100" Width="60" Height="20" VerticalAlignment="Bottom"></TextBox>
+            <ComboBox Name="cboHorizontalAlign" Margin="10,10,0,0" Width="100" Height="20" VerticalAlignment="Bottom">
+                <ComboBox.Items>
+                    <ComboBoxItem IsSelected="True" Content="Align Left" Tag="-1">
+                    </ComboBoxItem>
+                    <ComboBoxItem Content="Align Center" Tag="0">
+                    </ComboBoxItem>
+                    <ComboBoxItem Content="Align Right" Tag="1">
+                    </ComboBoxItem>
+                </ComboBox.Items>
+            </ComboBox>
+            <ComboBox Name="cboVerticalAlign" Margin="10,10,0,0" Width="100" Height="20" VerticalAlignment="Bottom">
+                <ComboBox.Items>
+                    <ComboBoxItem IsSelected="True" Content="Align Top" Tag="1">
+                    </ComboBoxItem>
+                    <ComboBoxItem Content="Align Center" Tag="0">
+                    </ComboBoxItem>
+                    <ComboBoxItem Content="Align Bottom" Tag="-1">
+                    </ComboBoxItem>
+                </ComboBox.Items>
+            </ComboBox>
+        </StackPanel>
+        <StackPanel Orientation="Horizontal" Margin="0">
+            <Button Content="Repeat horizontally" Height="20" HorizontalAlignment="Left" Margin="10,10,0,0" Name="btnRepeatHorizontally" VerticalAlignment="Top" Click="btnRepeatHorizontally_Click" />
+            <TextBox Name="txtRepeatHorTimes" Margin="5,10,0,0" Text="2" Width="30" Height="20" VerticalAlignment="Bottom"></TextBox>
+            <TextBlock Text="times" VerticalAlignment="Bottom"></TextBlock>
+            <Button Content="Repeat vertically" Height="20" HorizontalAlignment="Left" Margin="10,10,0,0" Name="btnRepeatVertically" VerticalAlignment="Top" Click="btnRepeatVertically_Click" />
+            <TextBox Name="txtRepeatVerTimes" Margin="5,10,0,0" Text="2" Width="30" Height="20" VerticalAlignment="Bottom"></TextBox>
+            <TextBlock Text="times" VerticalAlignment="Bottom"></TextBlock>
+        </StackPanel>
+        <StackPanel Orientation="Horizontal" Margin="0">
+            <Button Content="Check Balance" Height="20" HorizontalAlignment="Left" Margin="10,10,0,0" Name="btnBalanceCheck" VerticalAlignment="Top" Click="btnBalanceCheck_Click" />
+            <CheckBox Height="16" Margin="10,10,0,0" VerticalContentAlignment="Center" Name="chkIncludeWater" Content="Include water" IsChecked="True" Checked="chkIncludeWater_Checked" Unchecked="chkIncludeWater_Checked" />
+            <CheckBox Height="16" Margin="10,10,0,0" VerticalContentAlignment="Center" Name="chkMainlandFirst" Content="Traverse entire mainland first" IsChecked="True" Checked="chkIncludeWater_Checked" Unchecked="chkIncludeWater_Checked" />
+            <CheckBox Height="16" Margin="10,10,0,0" VerticalContentAlignment="Center" Name="chkIncludeIslands" Content="Include islands" IsChecked="True" Checked="chkIncludeWater_Checked" Unchecked="chkIncludeWater_Checked" />
+        </StackPanel>
+        <StackPanel Orientation="Horizontal" Margin="0">
+            <Button Content="Find fair starting locations" Height="20" HorizontalAlignment="Left" Margin="10,10,0,0" Name="btnFindFair" VerticalAlignment="Top" Click="btnFindFair_Click" />
+            <TextBlock Margin="5,10,0,0" Text="Fixed starts:" />
+            <TextBox Name="txtFixedStartingPositions" Margin="5,10,0,0" Text="" Width="60" Height="20" VerticalAlignment="Bottom"></TextBox>
+            <TextBlock Margin="5,10,0,0" Text="Minimum capital distance:" />
+            <TextBox Name="txtMinCapitalDistance" Margin="5,10,0,0" Text="10" Width="40" Height="20" VerticalAlignment="Bottom"></TextBox>
+            <TextBlock Margin="5,10,0,0" Name="lblProgress" Text="" />
+        </StackPanel>
+        <StackPanel Orientation="Horizontal" Visibility="Collapsed" Margin="0">
+            <CheckBox Height="16" Margin="10,10,10,0" VerticalContentAlignment="Center" Name="chkUseTraversalCosts" Content="Use advanced traversal costs" IsChecked="True" />
+            <TextBlock Text="Food weight:" VerticalAlignment="Bottom"></TextBlock>
+            <TextBox Name="txtFoodWeight" Margin="5,10,10,0" Text="3.0" Width="30" Height="20" VerticalAlignment="Bottom"></TextBox>
+            <TextBlock Text="Hammer weight:" VerticalAlignment="Bottom"></TextBlock>
+            <TextBox Name="txtHammerWeight" Margin="5,10,10,0" Text="1.0" Width="30" Height="20" VerticalAlignment="Bottom"></TextBox>
+            <TextBlock Text="Water cost:" VerticalAlignment="Bottom"></TextBlock>
+            <TextBox Name="txtWaterCost" Margin="5,10,10,0" Text="100.0" Width="50" Height="20" VerticalAlignment="Bottom"></TextBox>
+            <TextBlock Text="Base cost:" VerticalAlignment="Bottom"></TextBlock>
+            <TextBox Name="txtBaseCost" Margin="5,10,10,0" Text="100.0" Width="50" Height="20" VerticalAlignment="Bottom"></TextBox>
+            <TextBlock Text="Jungle penalizer:" VerticalAlignment="Bottom"></TextBlock>
+            <TextBox Name="txtJunglePenalizer" Margin="5,10,10,0" Text="3.0" Width="30" Height="20" VerticalAlignment="Bottom"></TextBox>
+        </StackPanel>
+        <StackPanel Orientation="Horizontal" Margin="10">
+            <ScrollViewer Name="uxMapScrollViewer" MouseWheel="uxMapScrollViewer_MouseWheel" Width="400" Height="400" VerticalScrollBarVisibility="Visible" HorizontalScrollBarVisibility="Visible" HorizontalContentAlignment="Left" VerticalContentAlignment="Top">
+                <Grid Name="MapContainer">
+                    <Grid.LayoutTransform>
+                        <TransformGroup>
+                            <ScaleTransform CenterX="0" CenterY="0" ScaleX="4" ScaleY="4" />
+                            <TranslateTransform X="0" Y="0" />
+                        </TransformGroup>
+                    </Grid.LayoutTransform>
+                    <Grid Name="uxMapGrid" ShowGridLines="False">
+                    </Grid>
+                    <Canvas x:Name="selectionCanvas" Background="Transparent" />
+                    <Canvas x:Name="canvas" Visibility="Visible" MouseDown="Canvas_MouseDown" MouseMove="Canvas_MouseMove" MouseUp="Canvas_MouseUp" Background="Transparent" />
+                </Grid>
+            </ScrollViewer>
+            <Slider Name="ZoomSlider" Orientation="Vertical" Value="5" Minimum="1" Maximum="10" ValueChanged="ZoomSlider_ValueChanged" />
+            <RichTextBox Margin="10,0,0,0" IsReadOnly="True" Name="txtReport" MinHeight="300" HorizontalAlignment="Left" VerticalAlignment="Stretch" Width="600" Background="White" />
+        </StackPanel>
+    </StackPanel>
+</Window>
