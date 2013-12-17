@@ -23,17 +23,13 @@ namespace MapEditor
         public const int TileWidth = 5;
         public const int TileHeight = 5;
 
-        private Game _Game;
-        private string _Title;
-        private StartingLocationPlacer _Placer = null;
+        private MapEditorModel _Model;
 
         public MainWindow()
         {
             InitializeComponent();
-            System.Reflection.Assembly asm = this.GetType().Assembly;
-            System.Reflection.AssemblyName name = asm.GetName();
-            this.Title = this.Title + " build " + name.Version.ToString();
-            _Title = this.Title;
+            _Model = new MapEditorModel();
+            this.Title = _Model.TitleWithSize;
             this.Closed += new EventHandler(MainWindow_Closed);
         }
 
@@ -46,29 +42,29 @@ namespace MapEditor
         {
             try
             {
-                this.Title = _Title + string.Format(" - ({0}x{1} tiles)", _Game.Map.Width, _Game.Map.Height);
+                this.Title = _Model.TitleWithSize;
                 uxMapGrid.Children.Clear();
                 uxMapGrid.RowDefinitions.Clear();
                 uxMapGrid.ColumnDefinitions.Clear();
-                for (int x = 0; x < _Game.Map.Width; x++)
+                for (int x = 0; x < _Model.Game.Map.Width; x++)
                 {
                     uxMapGrid.ColumnDefinitions.Add(
                         new ColumnDefinition { Width = new GridLength(TileWidth) }
                     );
                 }
-                for (int y = 0; y < _Game.Map.Height; y++)
+                for (int y = 0; y < _Model.Game.Map.Height; y++)
                 {
                     uxMapGrid.RowDefinitions.Add(
                          new RowDefinition { Height = new GridLength(TileHeight) }
                      );
                 }
-                MapContainer.MaxHeight = _Game.Map.Height * TileHeight;
+                MapContainer.MaxHeight = _Model.Game.Map.Height * TileHeight;
                 txtReport.MaxHeight = uxMapScrollViewer.Height;
-                for (int x = 0; x < _Game.Map.Width; x++)
+                for (int x = 0; x < _Model.Game.Map.Width; x++)
                 {
-                    for (int y = 0; y < _Game.Map.Height; y++)
+                    for (int y = 0; y < _Model.Game.Map.Height; y++)
                     {
-                        Tile t = _Game.Map.GetTile(x, y);
+                        Tile t = _Model.Game.Map.GetTile(x, y);
                         Rectangle terrain = CreateTileRectangle(x, y, t, 1);
                         terrain.Fill = GetTerrainBrush(t.Terrain, t.PlotType, t.FeatureType);
                         uxMapGrid.Children.Add(terrain);
@@ -108,7 +104,7 @@ namespace MapEditor
                             if (t.ClosestPlayer == -1)
                                 overlay.Fill = new SolidColorBrush(GetPrimaryColor(PlayerColors.PLAYERCOLOR_BLACK));
                             else
-                                overlay.Fill = new SolidColorBrush(GetPrimaryColor(_Game.Players[t.ClosestPlayer].Color));
+                                overlay.Fill = new SolidColorBrush(GetPrimaryColor(_Model.Game.Players[t.ClosestPlayer].Color));
                         }
                         else
                             continue;
@@ -127,7 +123,7 @@ namespace MapEditor
             Rectangle element = new Rectangle();
             element.Width = TileWidth;
             element.Height = TileHeight;
-            element.SetValue(Grid.RowProperty, _Game.Map.Height - 1 - y);
+            element.SetValue(Grid.RowProperty, _Model.Game.Map.Height - 1 - y);
             element.SetValue(Grid.ColumnProperty, x);
             element.Opacity = opacity;
             return element;
@@ -264,7 +260,7 @@ namespace MapEditor
                 Nullable<bool> result = dlg.ShowDialog();
                 if (result == true)
                 {
-                    _Game = WorldBuilderParser.FromWorldbuilderFile(dlg.FileName); //@"C:\Users\ottarv\Dropbox\Public\PBEM17\sandbox\pbem17_50x50_3.CivBeyondSwordWBSave");
+                    _Model.Game = WorldBuilderParser.FromWorldbuilderFile(dlg.FileName);
                     ResizeAndShowMap();
                     ZoomSlider.Value = ZoomSlider.Minimum;
                 }
@@ -277,22 +273,25 @@ namespace MapEditor
 
         private void StopSearch()
         {
-            if (_Placer != null)
+            if (_Model.Placer != null)
             {
-                _Placer.Stop();
-                _Placer = null;
+                _Model.Placer.Stop();
+                _Model.Placer = null;
             }
         }
 
         private void ResizeAndShowMap()
         {
-            uxMapScrollViewer.Width = uxMapScrollViewer.Height * _Game.Map.Width / _Game.Map.Height;
+            uxMapScrollViewer.Width = uxMapScrollViewer.Height * _Model.Game.Map.Width / _Model.Game.Map.Height;
             ShowMap(false);
-            MapContainer.Width = _Game.Map.Width * TileWidth;
-            MapContainer.Height = _Game.Map.Height * TileHeight;
+            MapContainer.Width = _Model.Game.Map.Width * TileWidth;
+            MapContainer.Height = _Model.Game.Map.Height * TileHeight;
             this.UpdateLayout();
             ZoomSlider.Minimum = Math.Log(uxMapScrollViewer.ViewportWidth / MapContainer.ActualWidth, 1.3);
             ZoomSlider.Maximum = Math.Max(10, ZoomSlider.Minimum + 5);
+            LayerList.ItemsSource = _Model.State.Layers;
+            UndoHistory.ItemsSource = _Model.UndoHistory;
+            UndoHistory.SelectedIndex = _Model.UndoIndex;
         }
 
         private void btnSaveMap_Click(object sender, RoutedEventArgs e)
@@ -305,7 +304,7 @@ namespace MapEditor
                 Nullable<bool> result = dlg.ShowDialog();
                 if (result == true)
                 {
-                    WorldBuilderParser.ToWorldbuilderFile(_Game, dlg.FileName); //@"C:\Users\ottarv\Dropbox\Public\PBEM17\sandbox\pbem17_50x50_3.CivBeyondSwordWBSave");
+                    WorldBuilderParser.ToWorldbuilderFile(_Model.Game, dlg.FileName);
                     MessageBox.Show("Map saved successfully.", "Save complete");
                 }
             }
@@ -329,9 +328,9 @@ namespace MapEditor
         {
             try
             {
-                if (_Game == null || _Game.Map == null) return;
+                if (_Model.Game == null || _Model.Game.Map == null) return;
                 BalanceCheckerSettings settings = GetBalanceSettings();
-                BalanceReport report = BalanceChecker.CheckBalance(_Game.Map, settings, null);
+                BalanceReport report = BalanceChecker.CheckBalance(_Model.Game.Map, settings, null);
                 ShowMap(true);
                 ShowBalanceReport(report);
             }
@@ -344,12 +343,13 @@ namespace MapEditor
         private void ShowBalanceReport(BalanceReport report)
         {
             FlowDocument doc = new FlowDocument();
+            tabBalanceReport.IsEnabled = true;
             txtReport.Document = doc;
-            doc.Blocks.Add(new Paragraph(new Run("Total map unfairness (standard deviation in weighted land quality): " + (int)Math.Round(report.Unfairness))) { Foreground = new SolidColorBrush(Colors.Black) });
+            doc.Blocks.Add(new Paragraph(new Run("Total map unfairness (standard deviation in weighted land quality): " + (int)Math.Round(report.Unfairness))) { Foreground = new SolidColorBrush(Colors.White) });
             foreach (var item in report.PlayerData)
             {
-                string text = item.ToString(_Game);
-                doc.Blocks.Add(new Paragraph(new Run(text)) { Foreground = new SolidColorBrush(GetPrimaryColor(_Game.Players[item.Player].Color)), Background=new SolidColorBrush(Colors.Black) });
+                string text = item.ToString(_Model.Game);
+                doc.Blocks.Add(new Paragraph(new Run(text)) { Foreground = new SolidColorBrush(GetPrimaryColor(_Model.Game.Players[item.Player].Color)), Background = new SolidColorBrush(Colors.Black) });
             }
         }
 
@@ -483,8 +483,8 @@ namespace MapEditor
                 int width = (int)Math.Ceiling(rect.Width / TileWidth);
                 int height = (int)Math.Ceiling(rect.Height / TileHeight);
                 int left = (int)(Canvas.GetLeft(rect) / TileWidth);
-                int top = _Game.Map.Height - height - (int)(Canvas.GetTop(rect) / TileHeight);
-                _Game.Map.SelectTiles(left, top, width, height);
+                int top = _Model.Game.Map.Height - height - (int)(Canvas.GetTop(rect) / TileHeight);
+                _Model.Game.Map.SelectTiles(left, top, width, height);
                 ShowMap(false);
                 canvas.Children.Remove(rect);
                 rect = null;
@@ -568,7 +568,7 @@ namespace MapEditor
         {
             try
             {
-                _Game.Map = _Game.Map.RotateCW();
+                _Model.PerformOperation(new NamedMapOperation("RotateCW"));
                 ResizeAndShowMap();
             }
             catch (Exception ex)
@@ -581,7 +581,7 @@ namespace MapEditor
         {
             try
             {
-                _Game.Map = _Game.Map.RotateCCW();
+                _Model.PerformOperation(new NamedMapOperation("RotateCCW"));
                 ResizeAndShowMap();
             }
             catch (Exception ex)
@@ -594,7 +594,7 @@ namespace MapEditor
         {
             try
             {
-                _Game.Map = _Game.Map.CropToSelection();
+                _Model.PerformOperation(new NamedMapOperation("CropToSelection"));
                 ResizeAndShowMap();
             }
             catch (Exception ex)
@@ -607,7 +607,7 @@ namespace MapEditor
         {
             try
             {
-                _Game.Map = _Game.Map.ScrambleSelection(int.Parse(txtMaxScrambleDistance.Text), chkDontScrambleWater.IsChecked.Value);
+                _Model.Game.Map = _Model.Game.Map.ScrambleSelection(int.Parse(txtMaxScrambleDistance.Text), chkDontScrambleWater.IsChecked.Value);
                 ResizeAndShowMap();
             }
             catch (Exception ex)
@@ -620,7 +620,7 @@ namespace MapEditor
         {
             try
             {
-                _Game.Map = _Game.Map.ExpandToSize(int.Parse(txtResizeWidth.Text), int.Parse(txtResizeHeight.Text), TerrainTypes.TERRAIN_GRASS, PlotTypes.FLAT, (HorizontalNeighbour)int.Parse(((ComboBoxItem)cboHorizontalAlign.SelectedItem).Tag.ToString()), (VerticalNeighbour)int.Parse(((ComboBoxItem)cboVerticalAlign.SelectedItem).Tag.ToString()));
+                _Model.Game.Map = _Model.Game.Map.ExpandToSize(int.Parse(txtResizeWidth.Text), int.Parse(txtResizeHeight.Text), TerrainTypes.TERRAIN_GRASS, PlotTypes.FLAT, (HorizontalNeighbour)int.Parse(((ComboBoxItem)cboHorizontalAlign.SelectedItem).Tag.ToString()), (VerticalNeighbour)int.Parse(((ComboBoxItem)cboVerticalAlign.SelectedItem).Tag.ToString()));
                 ResizeAndShowMap();
             }
             catch (Exception ex)
@@ -653,7 +653,7 @@ namespace MapEditor
         {
             try
             {
-                _Game.Map = _Game.Map.RotateAroundCorner(leftCorner, topCorner);
+                _Model.Game.Map = _Model.Game.Map.RotateAroundCorner(leftCorner, topCorner);
                 ResizeAndShowMap();
             }
             catch (Exception ex)
@@ -666,7 +666,7 @@ namespace MapEditor
         {
             try
             {
-                _Game.Map = _Game.Map.MirrorWest();
+                _Model.Game.Map = _Model.Game.Map.MirrorWest();
                 ResizeAndShowMap();
             }
             catch (Exception ex)
@@ -679,7 +679,7 @@ namespace MapEditor
         {
             try
             {
-                _Game.Map = _Game.Map.MirrorEast();
+                _Model.Game.Map = _Model.Game.Map.MirrorEast();
                 ResizeAndShowMap();
             }
             catch (Exception ex)
@@ -692,7 +692,7 @@ namespace MapEditor
         {
             try
             {
-                _Game.Map = _Game.Map.MirrorNorth();
+                _Model.Game.Map = _Model.Game.Map.MirrorNorth();
                 ResizeAndShowMap();
             }
             catch (Exception ex)
@@ -705,7 +705,7 @@ namespace MapEditor
         {
             try
             {
-                _Game.Map = _Game.Map.MirrorSouth();
+                _Model.Game.Map = _Model.Game.Map.MirrorSouth();
                 ResizeAndShowMap();
             }
             catch (Exception ex)
@@ -718,7 +718,7 @@ namespace MapEditor
         {
             try
             {
-                _Game.Map = _Game.Map.RepeatHorizontally(int.Parse(txtRepeatHorTimes.Text));
+                _Model.Game.Map = _Model.Game.Map.RepeatHorizontally(int.Parse(txtRepeatHorTimes.Text));
                 ResizeAndShowMap();
             }
             catch (Exception ex)
@@ -731,7 +731,7 @@ namespace MapEditor
         {
             try
             {
-                _Game.Map = _Game.Map.RepeatVertically(int.Parse(txtRepeatVerTimes.Text));
+                _Model.Game.Map = _Model.Game.Map.RepeatVertically(int.Parse(txtRepeatVerTimes.Text));
                 ResizeAndShowMap();
             }
             catch (Exception ex)
@@ -744,35 +744,35 @@ namespace MapEditor
         {
             try
             {
-                if (_Game == null || _Game.Map == null) return;
+                if (_Model.Game == null || _Model.Game.Map == null) return;
                 BalanceCheckerSettings settings = GetBalanceSettings();
-                if (_Placer != null)
+                if (_Model.Placer != null)
                 {
-                    if (_Placer.IsRunning())
+                    if (_Model.Placer.IsRunning())
                     {
-                        _Placer.Stop();
-                        if (_Placer.TopResult == null) return;
-                        _Placer.TopResult.ApplyToMap(_Game.Map);
-                        BalanceReport report = BalanceChecker.CheckBalance(_Game.Map, settings, null);
+                        _Model.Placer.Stop();
+                        if (_Model.Placer.TopResult == null) return;
+                        _Model.Placer.TopResult.ApplyToMap(_Model.Game.Map);
+                        BalanceReport report = BalanceChecker.CheckBalance(_Model.Game.Map, settings, null);
                         ShowMap(true);
                         ShowBalanceReport(report);
                         btnFindFair.Content = "Continue search";
                     }
                     else
                     {
-                        _Placer.Continue();
+                        _Model.Placer.Continue();
                         btnFindFair.Content = "Show best result found so far";
                     }
                 }
                 else
                 {
-                    _Placer = new StartingLocationPlacer();
-                    _Placer.Progress += new EventHandler(_Placer_Progress);
+                    _Model.Placer = new StartingLocationPlacer();
+                    _Model.Placer.Progress += new EventHandler(_Placer_Progress);
                     List<int> fixedStarts = new List<int>();
                     if(!string.IsNullOrEmpty(txtFixedStartingPositions.Text))
                         foreach (string s in txtFixedStartingPositions.Text.Split(char.Parse(";")))
                             fixedStarts.Add(int.Parse(s));
-                    _Placer.FindFairStartingLocations(_Game.Map, settings, fixedStarts, int.Parse(txtMinCapitalDistance.Text));
+                    _Model.Placer.FindFairStartingLocations(_Model.Game.Map, settings, fixedStarts, int.Parse(txtMinCapitalDistance.Text));
                     btnFindFair.Content = "Show best result found so far";
                 }
             }
@@ -794,13 +794,13 @@ namespace MapEditor
                 this.Dispatcher.BeginInvoke(new System.Threading.ThreadStart(ShowSearchStatus));
                 return;
             }
-            if (_Placer.IsRunning())
+            if (_Model.Placer.IsRunning())
             {
-                if (_Placer.TopResult == null) return;
-                lblProgress.Text = _Placer.NumberOfPositionsConsidered + " positions considered... Current best score " + _Placer.TopResultUnfairness;
-                _Placer.TopResult.ApplyToMap(_Game.Map);
+                if (_Model.Placer.TopResult == null) return;
+                lblProgress.Text = _Model.Placer.NumberOfPositionsConsidered + " positions considered... Current best score " + _Model.Placer.TopResultUnfairness;
+                _Model.Placer.TopResult.ApplyToMap(_Model.Game.Map);
                 BalanceCheckerSettings settings = GetBalanceSettings();
-                BalanceReport report = BalanceChecker.CheckBalance(_Game.Map, settings, null);
+                BalanceReport report = BalanceChecker.CheckBalance(_Model.Game.Map, settings, null);
                 ShowMap(true);
                 ShowBalanceReport(report);
             }
@@ -810,7 +810,7 @@ namespace MapEditor
         {
             try
             {
-                _Game.Map.ClearSelection();
+                _Model.Game.Map.ClearSelection();
                 ResizeAndShowMap();
             }
             catch (Exception ex)
@@ -818,6 +818,17 @@ namespace MapEditor
                 HandleError(ex);
             }
            
+        }
+
+        private void UndoHistory_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (UndoHistory.SelectedIndex >= 0)
+            {
+                if (_Model.UndoTo(UndoHistory.SelectedIndex))
+                {
+                    ResizeAndShowMap();
+                }
+            }
         }
 
     }

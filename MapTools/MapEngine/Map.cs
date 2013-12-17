@@ -6,6 +6,40 @@ using System.Collections;
 
 namespace MapEngine
 {
+    public abstract class MapOperation
+    {
+        public abstract Map Execute(Map map);
+        public abstract string GetName();
+    }
+
+    public class NamedMapOperation : MapOperation
+    {
+        string name;
+
+        public NamedMapOperation(string operationName)
+        {
+            this.name = operationName;
+        }
+
+        public override string GetName()
+        {
+            return name;
+        }
+
+        public override Map Execute(Map map)
+        {
+            switch(name) {
+                case "RotateCW":
+                    return map.RotateCW();
+                case "RotateCCW":
+                    return map.RotateCCW();
+                case "CropToSelection":
+                    return map.CropToSelection();
+            }
+            throw new NotImplementedException("Operation " + name + " not implemented.");
+        }
+    }
+
     [Serializable]
     public class Map : ICloneable
     {
