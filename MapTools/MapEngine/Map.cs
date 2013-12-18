@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Collections;
+using MapEngine.Parameters;
 
 namespace MapEngine
 {
@@ -12,31 +13,27 @@ namespace MapEngine
         public abstract string GetName();
     }
 
-    public class NamedMapOperation : MapOperation
+    public class GenericOperation<T> : MapOperation
     {
-        string name;
+        protected T _parameters;
+        protected string _name;
+        protected Func<T, Map> _method;
 
-        public NamedMapOperation(string operationName)
+        public GenericOperation(string name, Func<T, Map> method, T parameters)
         {
-            this.name = operationName;
-        }
-
-        public override string GetName()
-        {
-            return name;
+            _name = name;
+            _method = method;
+            _parameters = parameters;
         }
 
         public override Map Execute(Map map)
         {
-            switch(name) {
-                case "RotateCW":
-                    return map.RotateCW();
-                case "RotateCCW":
-                    return map.RotateCCW();
-                case "CropToSelection":
-                    return map.CropToSelection();
-            }
-            throw new NotImplementedException("Operation " + name + " not implemented.");
+            return _method.Invoke(_parameters);
+        }
+
+        public override string GetName()
+        {
+            return _name;
         }
     }
 
@@ -124,6 +121,14 @@ namespace MapEngine
             return map2;
         }
 
+        public Map Rotate(RotateParameters parameters)
+        {
+            if (parameters.Clockwise)
+                return RotateCW();
+            else
+                return RotateCCW();
+        }
+
         public Map RotateCW()
         {
             Map map = new Map();
@@ -168,9 +173,10 @@ namespace MapEngine
             return map2;
         }
 
-        public Map ScrambleSelection(int maxSwapDistance, bool dontScrambleWater)
+        public Map ScrambleSelection(ScrambleParameters parameters)
         {
-            var unswappedTiles = this.GetAllTiles().Where(t => t.Selected && !(t.IsWater() && dontScrambleWater)).ToList();
+            Map map = (Map)this.Clone();
+            var unswappedTiles = map.GetAllTiles().Where(t => t.Selected && !(t.IsWater() && parameters.DontScrambleWater)).ToList();
             unswappedTiles = Utility.ShuffleList(unswappedTiles);
             Dictionary<Tile, Tile> swaps = new Dictionary<Tile, Tile>();
             while (unswappedTiles.Count > 0)
@@ -180,7 +186,7 @@ namespace MapEngine
                 for (var i = 1; i < unswappedTiles.Count; i++)
                 {
                     var t = unswappedTiles[i];
-                    if (GetDistanceBetween(t.X, t.Y, tileToSwap.X, tileToSwap.Y) <= maxSwapDistance)
+                    if (map.GetDistanceBetween(t.X, t.Y, tileToSwap.X, tileToSwap.Y) <= parameters.Distance)
                     {
                         tileToSwapWith = t;
                         break;
@@ -195,38 +201,23 @@ namespace MapEngine
             }
             foreach (var tile in swaps.Keys)
             {
-                _SwapTiles(tile, swaps[tile]);
+                Utility.SwapTiles(tile, swaps[tile]);
             }
-            this.CalculateFreshWater();
-            this.CalculateIrrigationStatus();
-            this.AssignContinentIds();
-            return this;
+            map.CalculateFreshWater();
+            map.CalculateIrrigationStatus();
+            map.AssignContinentIds();
+            return map;
         }
 
-        private void _SwapTiles(Tile t1, Tile t2)
+        public Map ClearSelection(SelectionParameters parameters)
         {
-            Tile tmp = (Tile)t1.Clone();
-            _CopyTileInfo(t1, t2);
-            _CopyTileInfo(t2, tmp);
-        }
-
-        private void _CopyTileInfo(Tile to, Tile from)
-        {
-            to.BonusType =  from.BonusType;
-            to.FeatureType = from.FeatureType;
-            to.FeatureVariety = from.FeatureVariety;
-            to.FreshWaterType = from.FreshWaterType;
-            to.PlotType = from.PlotType;
-            to.Terrain = from.Terrain;
-        }
-
-        public void ClearSelection()
-        {
-            foreach (var t in GetAllTiles())
+            Map map = (Map)this.Clone();
+            foreach (var t in map.GetAllTiles())
                 t.Selected = false;
+            return map;
         }
 
-        public Map CropToSelection()
+        public Map CropToSelection(CropParameters parameters)
         {
             int minX = int.MaxValue; int maxX = int.MinValue; int minY = int.MaxValue; int maxY = int.MinValue;
             foreach (Tile t in this.GetAllTiles())
@@ -254,14 +245,22 @@ namespace MapEngine
             return map;
         }
 
-        public Map RotateAroundCorner(bool leftCorner, bool topCorner)
+        public Map RotateAroundCorner(RotateAroundCornerParameters parameters)
         {
             Map map = this;
-            if (map.Width != map.Height) map = map.ExpandToSize(Math.Min(map.Width, map.Height), Math.Min(map.Width, map.Height), TerrainTypes.TERRAIN_GRASS, PlotTypes.FLAT, HorizontalNeighbour.None, VerticalNeighbour.None);
-            Map topLeft = null, topRight = null, bottomLeft = null, bottomRight = null;
-            if (leftCorner)
+            if (map.Width != map.Height) map = map.ExpandToSize(new ResizeParameters()
             {
-                if (topCorner)
+                Width = Math.Min(map.Width, map.Height),
+                Height = Math.Min(map.Width, map.Height),
+                TerrainType = TerrainTypes.TERRAIN_GRASS,
+                PlotType = PlotTypes.FLAT,
+                HorAlign = HorizontalNeighbour.None,
+                VerAlign = VerticalNeighbour.None
+            });
+            Map topLeft = null, topRight = null, bottomLeft = null, bottomRight = null;
+            if (parameters.LeftCorner)
+            {
+                if (parameters.TopCorner)
                 {
                     // Rotate around top left corner
                     bottomRight = map;
@@ -280,7 +279,7 @@ namespace MapEngine
             }
             else
             {
-                if (topCorner)
+                if (parameters.TopCorner)
                 {
                     // Rotate around top right corner
                     bottomLeft = map;
@@ -313,7 +312,7 @@ namespace MapEngine
                     this.SetTile(x, y, (Tile)map.GetTile(x - minX, y - minY).Clone());
         }
 
-        public Map MirrorEast()
+        public Map MirrorEast(MirrorParameters parameters)
         {
             Map map = (Map)this.Clone();
             map.SetDimensions(this.Width * 2, this.Height);
@@ -330,7 +329,7 @@ namespace MapEngine
             return map;
         }
 
-        public Map MirrorWest()
+        public Map MirrorWest(MirrorParameters parameters)
         {
             Map map = (Map)this.Clone();
             map.SetDimensions(this.Width * 2, this.Height);
@@ -347,41 +346,41 @@ namespace MapEngine
             return map;
         }
 
-        public Map RepeatHorizontally(int times)
+        public Map RepeatHorizontally(RepeatParameters parameters)
         {
-            if (times < 2) return this;
+            if (parameters.Times < 2) return this;
             Map map = (Map)this.Clone();
-            map.SetDimensions(this.Width * times, this.Height);
+            map.SetDimensions(this.Width * parameters.Times, this.Height);
             for (int x = 0; x < this.Width; x++)
             {
                 for (int y = 0; y < this.Height; y++)
                 {
                     Tile t = this.GetTile(x, y);
-                    for(int r = 0; r < times; r++)
+                    for (int r = 0; r < parameters.Times; r++)
                         map.SetTile(x + r*this.Width, y, (Tile)t.Clone());
                 }
             }
             return map;
         }
 
-        public Map RepeatVertically(int times)
+        public Map RepeatVertically(RepeatParameters parameters)
         {
-            if (times < 2) return this;
+            if (parameters.Times < 2) return this;
             Map map = (Map)this.Clone();
-            map.SetDimensions(this.Width, this.Height * times);
+            map.SetDimensions(this.Width, this.Height * parameters.Times);
             for (int x = 0; x < this.Width; x++)
             {
                 for (int y = 0; y < this.Height; y++)
                 {
                     Tile t = this.GetTile(x, y);
-                    for (int r = 0; r < times; r++)
+                    for (int r = 0; r < parameters.Times; r++)
                         map.SetTile(x, y + r * this.Height, (Tile)t.Clone());
                 }
             }
             return map;
         }
 
-        public Map MirrorNorth()
+        public Map MirrorNorth(MirrorParameters parameters)
         {
             Map map = (Map)this.Clone();
             map.SetDimensions(this.Width, this.Height * 2);
@@ -398,7 +397,7 @@ namespace MapEngine
             return map;
         }
 
-        public Map MirrorSouth()
+        public Map MirrorSouth(MirrorParameters parameters)
         {
             Map map = (Map)this.Clone();
             map.SetDimensions(this.Width, this.Height * 2);
@@ -471,33 +470,33 @@ namespace MapEngine
             }
         }
 
-        public Map ExpandToSize(int newWidth, int newHeight, TerrainTypes fillWithTerrain, PlotTypes fillWithPlotType, HorizontalNeighbour horAlignment, VerticalNeighbour verAlignment)
+        public Map ExpandToSize(ResizeParameters parameters)
         {
             Map map = (Map)this.Clone();
-            map.SetDimensions(newWidth, newHeight);
-            for (int x = 0; x < newWidth; x++)
+            map.SetDimensions(parameters.Width, parameters.Height);
+            for (int x = 0; x < parameters.Width; x++)
             {
-                for (int y = 0; y < newHeight; y++)
+                for (int y = 0; y < parameters.Height; y++)
                 {
                     Tile t = new Tile();
-                    t.PlotType = fillWithPlotType;
-                    t.Terrain = fillWithTerrain;
+                    t.PlotType = parameters.PlotType;
+                    t.Terrain = parameters.TerrainType;
                     map.SetTile(x, y, t);
                 }
             }
             int minX = 0; // west alignment
             int minY = 0; // south alignment
-            if (horAlignment == HorizontalNeighbour.None) // center alignment
-                minX = (this.Width - newWidth) / 2;
-            else if (horAlignment == HorizontalNeighbour.East)
-                minX = this.Width - newWidth;
-            if (verAlignment == VerticalNeighbour.None) // center alignment
-                minY = (this.Height - newHeight) / 2;
-            else if (verAlignment == VerticalNeighbour.North)
-                minY = this.Height - newHeight;
-            for (int x = minX; x < minX + newWidth; x++)
+            if (parameters.HorAlign == HorizontalNeighbour.None) // center alignment
+                minX = (this.Width - parameters.Width) / 2;
+            else if (parameters.HorAlign == HorizontalNeighbour.East)
+                minX = this.Width - parameters.Width;
+            if (parameters.VerAlign == VerticalNeighbour.None) // center alignment
+                minY = (this.Height - parameters.Height) / 2;
+            else if (parameters.VerAlign == VerticalNeighbour.North)
+                minY = this.Height - parameters.Height;
+            for (int x = minX; x < minX + parameters.Width; x++)
             {
-                for (int y = minY; y < minY + newHeight; y++)
+                for (int y = minY; y < minY + parameters.Height; y++)
                 {
                     Tile t = (Tile)this.GetTileAcrossWrap(x, y, false, false);
                     if(t != null)
@@ -777,14 +776,16 @@ namespace MapEngine
             if (t != null) tiles.Add(t);
         }
 
-        public void SelectTiles(int left, int top, int width, int height)
+        public Map SelectTiles(SelectionParameters parameters)
         {
-            for(int x = left; x < left+width; x++)
-                for(int y = top; y < top+height; y++)
+            Map map = (Map)this.Clone();
+            for (int x = parameters.Left; x < parameters.Left + parameters.Width; x++)
+                for (int y = parameters.Top; y < parameters.Top + parameters.Height; y++)
                 {
-                    Tile t = GetTileAcrossWrap(x, y);
+                    Tile t = map.GetTileAcrossWrap(x, y);
                     if (t != null) t.Selected = true;
                 }
+            return map;
         }
 
         #region ICloneable Members

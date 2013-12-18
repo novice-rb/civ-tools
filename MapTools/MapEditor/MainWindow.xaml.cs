@@ -12,6 +12,7 @@ using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
 using MapEngine;
+using MapEngine.Parameters;
 
 namespace MapEditor
 {
@@ -261,7 +262,7 @@ namespace MapEditor
                 if (result == true)
                 {
                     _Model.Game = WorldBuilderParser.FromWorldbuilderFile(dlg.FileName);
-                    ResizeAndShowMap();
+                    UpdateMap(true);
                     ZoomSlider.Value = ZoomSlider.Minimum;
                 }
             }
@@ -280,15 +281,18 @@ namespace MapEditor
             }
         }
 
-        private void ResizeAndShowMap()
+        private void UpdateMap(bool resized)
         {
-            uxMapScrollViewer.Width = uxMapScrollViewer.Height * _Model.Game.Map.Width / _Model.Game.Map.Height;
+            if(resized) uxMapScrollViewer.Width = uxMapScrollViewer.Height * _Model.Game.Map.Width / _Model.Game.Map.Height;
             ShowMap(false);
-            MapContainer.Width = _Model.Game.Map.Width * TileWidth;
-            MapContainer.Height = _Model.Game.Map.Height * TileHeight;
-            this.UpdateLayout();
-            ZoomSlider.Minimum = Math.Log(uxMapScrollViewer.ViewportWidth / MapContainer.ActualWidth, 1.3);
-            ZoomSlider.Maximum = Math.Max(10, ZoomSlider.Minimum + 5);
+            if (resized)
+            {
+                MapContainer.Width = _Model.Game.Map.Width * TileWidth;
+                MapContainer.Height = _Model.Game.Map.Height * TileHeight;
+                this.UpdateLayout();
+                ZoomSlider.Minimum = Math.Log(uxMapScrollViewer.ViewportWidth / MapContainer.ActualWidth, 1.3);
+                ZoomSlider.Maximum = Math.Max(10, ZoomSlider.Minimum + 5);
+            }
             LayerList.ItemsSource = _Model.State.Layers;
             UndoHistory.ItemsSource = _Model.UndoHistory;
             UndoHistory.SelectedIndex = _Model.UndoIndex;
@@ -484,8 +488,15 @@ namespace MapEditor
                 int height = (int)Math.Ceiling(rect.Height / TileHeight);
                 int left = (int)(Canvas.GetLeft(rect) / TileWidth);
                 int top = _Model.Game.Map.Height - height - (int)(Canvas.GetTop(rect) / TileHeight);
-                _Model.Game.Map.SelectTiles(left, top, width, height);
-                ShowMap(false);
+                _Model.PerformOperation(new GenericOperation<SelectionParameters>("Select tiles", _Model.Game.Map.SelectTiles, new SelectionParameters()
+                {
+                    ClearSelection = false,
+                    Left = left,
+                    Top = top,
+                    Width = width,
+                    Height = height
+                }));
+                UpdateMap(false);
                 canvas.Children.Remove(rect);
                 rect = null;
                 canvas.Cursor = Cursors.Arrow;
@@ -568,8 +579,8 @@ namespace MapEditor
         {
             try
             {
-                _Model.PerformOperation(new NamedMapOperation("RotateCW"));
-                ResizeAndShowMap();
+                _Model.PerformOperation(new GenericOperation<RotateParameters>("Rotate clockwise", _Model.Game.Map.Rotate, new RotateParameters() { Clockwise = true }));
+                UpdateMap(true);
             }
             catch (Exception ex)
             {
@@ -581,8 +592,8 @@ namespace MapEditor
         {
             try
             {
-                _Model.PerformOperation(new NamedMapOperation("RotateCCW"));
-                ResizeAndShowMap();
+                _Model.PerformOperation(new GenericOperation<RotateParameters>("Rotate counter-clockwise", _Model.Game.Map.Rotate, new RotateParameters() { Clockwise = false }));
+                UpdateMap(true);
             }
             catch (Exception ex)
             {
@@ -594,8 +605,8 @@ namespace MapEditor
         {
             try
             {
-                _Model.PerformOperation(new NamedMapOperation("CropToSelection"));
-                ResizeAndShowMap();
+                _Model.PerformOperation(new GenericOperation<CropParameters>("Crop to selection", _Model.Game.Map.CropToSelection, new CropParameters()));
+                UpdateMap(true);
             }
             catch (Exception ex)
             {
@@ -607,8 +618,12 @@ namespace MapEditor
         {
             try
             {
-                _Model.Game.Map = _Model.Game.Map.ScrambleSelection(int.Parse(txtMaxScrambleDistance.Text), chkDontScrambleWater.IsChecked.Value);
-                ResizeAndShowMap();
+                _Model.PerformOperation(new GenericOperation<ScrambleParameters>("Scramble selection", _Model.Game.Map.ScrambleSelection, new ScrambleParameters()
+                {
+                    Distance = int.Parse(txtMaxScrambleDistance.Text),
+                    DontScrambleWater = chkDontScrambleWater.IsChecked.Value
+                }));
+                UpdateMap(false);
             }
             catch (Exception ex)
             {
@@ -620,8 +635,16 @@ namespace MapEditor
         {
             try
             {
-                _Model.Game.Map = _Model.Game.Map.ExpandToSize(int.Parse(txtResizeWidth.Text), int.Parse(txtResizeHeight.Text), TerrainTypes.TERRAIN_GRASS, PlotTypes.FLAT, (HorizontalNeighbour)int.Parse(((ComboBoxItem)cboHorizontalAlign.SelectedItem).Tag.ToString()), (VerticalNeighbour)int.Parse(((ComboBoxItem)cboVerticalAlign.SelectedItem).Tag.ToString()));
-                ResizeAndShowMap();
+                _Model.PerformOperation(new GenericOperation<ResizeParameters>("Resize", _Model.Game.Map.ExpandToSize, new ResizeParameters()
+                {
+                    Width = int.Parse(txtResizeWidth.Text),
+                    Height = int.Parse(txtResizeHeight.Text),
+                    TerrainType = TerrainTypes.TERRAIN_GRASS,
+                    PlotType = PlotTypes.FLAT,
+                    HorAlign = (HorizontalNeighbour)int.Parse(((ComboBoxItem)cboHorizontalAlign.SelectedItem).Tag.ToString()),
+                    VerAlign = (VerticalNeighbour)int.Parse(((ComboBoxItem)cboVerticalAlign.SelectedItem).Tag.ToString())
+                }));
+                UpdateMap(true);
             }
             catch (Exception ex)
             {
@@ -653,8 +676,12 @@ namespace MapEditor
         {
             try
             {
-                _Model.Game.Map = _Model.Game.Map.RotateAroundCorner(leftCorner, topCorner);
-                ResizeAndShowMap();
+                _Model.PerformOperation(new GenericOperation<RotateAroundCornerParameters>("Rotate around corner", _Model.Game.Map.RotateAroundCorner, new RotateAroundCornerParameters()
+                {
+                    LeftCorner = leftCorner,
+                    TopCorner = topCorner
+                }));
+                UpdateMap(true);
             }
             catch (Exception ex)
             {
@@ -666,8 +693,8 @@ namespace MapEditor
         {
             try
             {
-                _Model.Game.Map = _Model.Game.Map.MirrorWest();
-                ResizeAndShowMap();
+                _Model.PerformOperation(new GenericOperation<MirrorParameters>("Mirror west", _Model.Game.Map.MirrorWest, new MirrorParameters()));
+                UpdateMap(true);
             }
             catch (Exception ex)
             {
@@ -679,8 +706,8 @@ namespace MapEditor
         {
             try
             {
-                _Model.Game.Map = _Model.Game.Map.MirrorEast();
-                ResizeAndShowMap();
+                _Model.PerformOperation(new GenericOperation<MirrorParameters>("Mirror east", _Model.Game.Map.MirrorEast, new MirrorParameters()));
+                UpdateMap(true);
             }
             catch (Exception ex)
             {
@@ -692,8 +719,8 @@ namespace MapEditor
         {
             try
             {
-                _Model.Game.Map = _Model.Game.Map.MirrorNorth();
-                ResizeAndShowMap();
+                _Model.PerformOperation(new GenericOperation<MirrorParameters>("Mirror north", _Model.Game.Map.MirrorNorth, new MirrorParameters()));
+                UpdateMap(true);
             }
             catch (Exception ex)
             {
@@ -705,8 +732,8 @@ namespace MapEditor
         {
             try
             {
-                _Model.Game.Map = _Model.Game.Map.MirrorSouth();
-                ResizeAndShowMap();
+                _Model.PerformOperation(new GenericOperation<MirrorParameters>("Mirror south", _Model.Game.Map.MirrorSouth, new MirrorParameters()));
+                UpdateMap(true);
             }
             catch (Exception ex)
             {
@@ -718,8 +745,11 @@ namespace MapEditor
         {
             try
             {
-                _Model.Game.Map = _Model.Game.Map.RepeatHorizontally(int.Parse(txtRepeatHorTimes.Text));
-                ResizeAndShowMap();
+                _Model.PerformOperation(new GenericOperation<RepeatParameters>("Repeat horizontally", _Model.Game.Map.RepeatHorizontally, new RepeatParameters()
+                {
+                    Times = int.Parse(txtRepeatHorTimes.Text)
+                }));
+                UpdateMap(true);
             }
             catch (Exception ex)
             {
@@ -731,8 +761,11 @@ namespace MapEditor
         {
             try
             {
-                _Model.Game.Map = _Model.Game.Map.RepeatVertically(int.Parse(txtRepeatVerTimes.Text));
-                ResizeAndShowMap();
+                _Model.PerformOperation(new GenericOperation<RepeatParameters>("Repeat vertically", _Model.Game.Map.RepeatVertically, new RepeatParameters()
+                {
+                    Times = int.Parse(txtRepeatVerTimes.Text)
+                }));
+                UpdateMap(true);
             }
             catch (Exception ex)
             {
@@ -810,8 +843,8 @@ namespace MapEditor
         {
             try
             {
-                _Model.Game.Map.ClearSelection();
-                ResizeAndShowMap();
+                _Model.PerformOperation(new GenericOperation<SelectionParameters>("Clear selection", _Model.Game.Map.ClearSelection, new SelectionParameters() { ClearSelection = true }));
+                UpdateMap(false);
             }
             catch (Exception ex)
             {
@@ -826,7 +859,7 @@ namespace MapEditor
             {
                 if (_Model.UndoTo(UndoHistory.SelectedIndex))
                 {
-                    ResizeAndShowMap();
+                    UpdateMap(true);
                 }
             }
         }

@@ -45,6 +45,7 @@
     <Compile Include="Game.cs" />
     <Compile Include="Map.cs" />
     <Compile Include="MapState.cs" />
+    <Compile Include="Parameters.cs" />
     <Compile Include="Player.cs" />
     <Compile Include="PriorityQueue.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
