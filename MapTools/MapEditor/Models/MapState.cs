@@ -10,13 +10,13 @@ namespace MapEditor
     {
         public ObservableCollection<Layer> Layers { get; set; }
         public Layer ActiveLayer { get; set; }
-        public MapState ShallowClone()
+        public MapState Clone()
         {
             MapState s = new MapState();
             s.Layers = new ObservableCollection<Layer>();
             foreach(var l in Layers)
             {
-                var c = l.ShallowClone();
+                var c = l.Clone();
                 s.Layers.Add(c);
                 if (ActiveLayer == l)
                     s.ActiveLayer = c;

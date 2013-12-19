@@ -31,6 +31,7 @@ namespace MapEngine
         public FreshWaterTypes FreshWaterType { get; set; }
         public IrrigationStatus IrrigationStatus { get; set; }
         public bool Selected { get; set; }
+        public bool IsEmpty { get; set; }
         public bool WaterBodyContainsResources { get; set; }
         public bool WaterBodySupportsShips { get; set; }
         public int WaterBodySize { get; set; }

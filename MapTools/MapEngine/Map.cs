@@ -7,13 +7,13 @@ using MapEngine.Parameters;
 
 namespace MapEngine
 {
-    public abstract class MapOperation
+    public abstract class MapLayerOperation
     {
         public abstract Map Execute(Map map);
         public abstract string GetName();
     }
 
-    public class GenericOperation<T> : MapOperation
+    public class GenericOperation<T> : MapLayerOperation
     {
         protected T _parameters;
         protected string _name;

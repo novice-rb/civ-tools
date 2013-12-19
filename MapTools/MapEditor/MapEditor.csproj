@@ -73,6 +73,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Models\MapEditorModel.cs" />
+    <Compile Include="Models\MapOperations.cs" />
     <Compile Include="Models\MapState.cs" />
     <Compile Include="Models\ObservableObject.cs" />
     <Compile Include="Properties\AssemblyInfo.cs">

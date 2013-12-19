@@ -120,8 +120,13 @@
                 </StackPanel>
             </TabItem>
         </TabControl>
-        <StackPanel Margin="10,0,10,0">
-            <Button Content="Clear selection" Height="20" HorizontalAlignment="Left" Margin="0" Name="btnClearSelection" VerticalAlignment="Top" Click="btnClearSelection_Click" />
+        <StackPanel Margin="10,0,10,0" Orientation="Horizontal">
+            <Button Content="Clear selection" Height="20" HorizontalAlignment="Left" Margin="0,0,10,0" Name="btnClearSelection" VerticalAlignment="Top" Click="btnClearSelection_Click" />
+            <Button Content="Select tiles" Height="20" HorizontalAlignment="Left" Margin="0,0,10,0"  Name="btnSelectTiles" VerticalAlignment="Top" Click="btnSelectTiles_Click" />
+            <Button Content="Copy selected tiles to new layer" Height="20" HorizontalAlignment="Left" Margin="0,0,10,0" Name="btnCopySelection" VerticalAlignment="Top" Click="btnCopySelection_Click" />
+            <Button Content="Move selection" Height="20" HorizontalAlignment="Left" Margin="0,0,10,0" Name="btnMoveSelection" VerticalAlignment="Top" Click="btnMoveSelection_Click" />
+            <Button Content="Move selected tiles" Height="20" HorizontalAlignment="Left" Margin="0,0,10,0" Name="btnMoveSelected" VerticalAlignment="Top" Click="btnMoveSelected_Click" />
+            <Button Content="Move layer" Height="20" HorizontalAlignment="Left" Margin="0,0,10,0" Name="btnMoveLayer" VerticalAlignment="Top" Click="btnMoveLayer_Click" />
         </StackPanel>
         <TabControl Margin="10" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
             <TabItem Header="Map">
@@ -137,7 +142,7 @@
                             <Grid Name="uxMapGrid" ShowGridLines="False">
                             </Grid>
                             <Canvas x:Name="selectionCanvas" Background="Transparent" />
-                            <Canvas x:Name="canvas" Visibility="Visible" MouseDown="Canvas_MouseDown" MouseMove="Canvas_MouseMove" MouseUp="Canvas_MouseUp" Background="Transparent" />
+                            <Canvas x:Name="canvas" Visibility="Visible" MouseDown="Canvas_MouseDown" MouseMove="Canvas_MouseMove" MouseUp="Canvas_MouseUp" MouseLeave="Canvas_MouseLeave" Background="Transparent" />
                         </Grid>
                     </ScrollViewer>
                     <Slider Name="ZoomSlider" Orientation="Vertical" Value="5" Minimum="1" Maximum="10" ValueChanged="ZoomSlider_ValueChanged" />

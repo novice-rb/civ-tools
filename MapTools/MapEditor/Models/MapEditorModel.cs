@@ -51,22 +51,33 @@ namespace MapEditor
             Title = "MapTuner build " + name.Version.ToString();
         }
 
-        public void PerformOperation(MapOperation operation)
+        public void PerformMapOperation(MapOperation operation)
         {
-            EditMap(operation.GetName(), operation.Execute(Game.Map));
+            UndoHistory[UndoIndex].StateAfterOperation = State.Clone();
+            State = operation.Execute(State);
+            Game.Map = State.ActiveLayer.Map;
+            AddEditHistoryEntry(operation.GetName());
         }
 
-        public void EditMap(string operationName, Map newMap)
+        private void AddEditHistoryEntry(string operationName)
         {
-            UndoHistory[UndoIndex].StateAfterOperation = State.ShallowClone();
-            Game.Map = newMap;
-            State.ActiveLayer.Map = newMap;
             EditOperation op = new EditOperation();
             op.StateAfterOperation = State;
             op.Name = operationName;
             UndoIndex++;
             while (UndoHistory.Count > UndoIndex) UndoHistory.RemoveAt(UndoIndex);
             UndoHistory.Add(op);
+        }
+
+        public void PerformLayerOperation(MapLayerOperation operation)
+        {
+            UndoHistory[UndoIndex].StateAfterOperation = State.Clone();
+            foreach (var lyr in State.Layers)
+            {
+                lyr.Map = operation.Execute(lyr.Map);
+            }
+            Game.Map = State.ActiveLayer.Map;
+            AddEditHistoryEntry(operation.GetName());
         }
 
         public bool UndoTo(int index)

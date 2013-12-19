@@ -10,11 +10,11 @@ namespace MapEditor
     {
         public string LayerName { get; set; }
         public Map Map { get; set; }
-        public Layer ShallowClone()
+        public Layer Clone()
         {
             var lyr = new Layer();
-            lyr.LayerName = LayerName;
-            lyr.Map = Map;
+            lyr.LayerName = (string)LayerName.Clone();
+            lyr.Map = (Map)Map.Clone();
             return lyr;
         }
     }
