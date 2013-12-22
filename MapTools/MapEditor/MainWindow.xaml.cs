@@ -12,7 +12,6 @@ using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
 using MapEngine;
-using MapEngine.Parameters;
 
 namespace MapEditor
 {
@@ -39,6 +38,13 @@ namespace MapEditor
             StopSearch();
         }
 
+        private Map GetMap()
+        {
+            var map = _Model.Game.Map;
+            if (_Model.State.Layers.Count > 0) map = _Model.State.Layers.Last().Map;
+            return map;
+        }
+
         private void ShowMap(bool visualizeClosestPlayers)
         {
             try
@@ -47,69 +53,39 @@ namespace MapEditor
                 uxMapGrid.Children.Clear();
                 uxMapGrid.RowDefinitions.Clear();
                 uxMapGrid.ColumnDefinitions.Clear();
-                for (int x = 0; x < _Model.Game.Map.Width; x++)
+                var map = GetMap();
+                for (int x = 0; x < map.Width; x++)
                 {
                     uxMapGrid.ColumnDefinitions.Add(
                         new ColumnDefinition { Width = new GridLength(TileWidth) }
                     );
                 }
-                for (int y = 0; y < _Model.Game.Map.Height; y++)
+                for (int y = 0; y < map.Height; y++)
                 {
                     uxMapGrid.RowDefinitions.Add(
                          new RowDefinition { Height = new GridLength(TileHeight) }
                      );
                 }
-                MapContainer.MaxHeight = _Model.Game.Map.Height * TileHeight;
+                MapContainer.MaxHeight = map.Height * TileHeight;
                 txtReport.MaxHeight = uxMapScrollViewer.Height;
-                for (int x = 0; x < _Model.Game.Map.Width; x++)
+                var selection = _Model.State.Selection;
+                for (int x = 0; x < map.Width; x++)
                 {
-                    for (int y = 0; y < _Model.Game.Map.Height; y++)
+                    for (int y = 0; y < map.Height; y++)
                     {
-                        Tile t = _Model.Game.Map.GetTile(x, y);
-                        Rectangle terrain = CreateTileRectangle(x, y, t, 1);
-                        terrain.Fill = GetTerrainBrush(t.Terrain, t.PlotType, t.FeatureType, t.IsEmpty);
-                        uxMapGrid.Children.Add(terrain);
-                        if (t.IsEmpty) continue;
-                        if (t.BonusType != BonusTypes.BONUS_NONE)
+                        Tile tile = null;
+                        foreach (var lyr in _Model.State.Layers)
                         {
-                            Rectangle bonus = CreateTileRectangle(x, y, t, 1);
-                            bonus.Margin = new Thickness(TileWidth / 5);
-                            bonus.Fill = GetBonusBrush(t.BonusType);
-                            uxMapGrid.Children.Add(bonus);
+                            if (!lyr.Visible) continue;
+                            Tile t = lyr.Map.GetTile(x, y);
+                            if (t != null && !t.IsEmpty)
+                            {
+                                tile = t;
+                                break;
+                            }
                         }
-
-                        if (t.IsNOfRiver)
-                        {
-                            Rectangle river = CreateTileRectangle(x, y, t, 1);
-                            river.Fill = new SolidColorBrush(Color.FromRgb(0, 0, 255));
-                            river.Height /= 7;
-                            river.VerticalAlignment = System.Windows.VerticalAlignment.Bottom;
-                            uxMapGrid.Children.Add(river);
-                        }
-                        if (t.IsWOfRiver)
-                        {
-                            Rectangle river = CreateTileRectangle(x, y, t, 1);
-                            river.Fill = new SolidColorBrush(Color.FromRgb(0, 0, 255));
-                            river.Width /= 7;
-                            river.HorizontalAlignment = System.Windows.HorizontalAlignment.Right;
-                            uxMapGrid.Children.Add(river);
-                        }
-
-                        Rectangle overlay = CreateTileRectangle(x, y, t, 0.8);
-                        if (t.Units.Count > 0)
-                            overlay.Fill = new SolidColorBrush(Color.FromRgb(255, 0, 0));
-                        else if (t.Selected)
-                            overlay.Fill = new SolidColorBrush(GetPrimaryColor(PlayerColors.PLAYERCOLOR_CYAN));
-                        else if (visualizeClosestPlayers)
-                        {
-                            if (t.ClosestPlayer == -1)
-                                overlay.Fill = new SolidColorBrush(GetPrimaryColor(PlayerColors.PLAYERCOLOR_BLACK));
-                            else
-                                overlay.Fill = new SolidColorBrush(GetPrimaryColor(_Model.Game.Players[t.ClosestPlayer].Color));
-                        }
-                        else
-                            continue;
-                        uxMapGrid.Children.Add(overlay);
+                        if(tile == null) tile = new Tile() { X = x, Y = y, IsEmpty = true };
+                        RenderTile(map, tile, selection.ContainsTile(tile), visualizeClosestPlayers);
                     }
                 }
             }
@@ -119,13 +95,61 @@ namespace MapEditor
             }
         }
 
-        private Rectangle CreateTileRectangle(int x, int y, Tile t, double opacity)
+        private void RenderTile(Map map, Tile t, bool isSelected, bool visualizeClosestPlayers)
+        {
+            Rectangle terrain = CreateTileRectangle(map, t, 1);
+            terrain.Fill = GetTerrainBrush(t.Terrain, t.PlotType, t.FeatureType, t.IsEmpty);
+            uxMapGrid.Children.Add(terrain);
+            if (t.IsEmpty) return;
+            if (t.BonusType != BonusTypes.BONUS_NONE)
+            {
+                Rectangle bonus = CreateTileRectangle(map, t, 1);
+                bonus.Margin = new Thickness(TileWidth / 5);
+                bonus.Fill = GetBonusBrush(t.BonusType);
+                uxMapGrid.Children.Add(bonus);
+            }
+
+            if (t.IsNOfRiver)
+            {
+                Rectangle river = CreateTileRectangle(map, t, 1);
+                river.Fill = new SolidColorBrush(Color.FromRgb(0, 0, 255));
+                river.Height /= 7;
+                river.VerticalAlignment = System.Windows.VerticalAlignment.Bottom;
+                uxMapGrid.Children.Add(river);
+            }
+            if (t.IsWOfRiver)
+            {
+                Rectangle river = CreateTileRectangle(map, t, 1);
+                river.Fill = new SolidColorBrush(Color.FromRgb(0, 0, 255));
+                river.Width /= 7;
+                river.HorizontalAlignment = System.Windows.HorizontalAlignment.Right;
+                uxMapGrid.Children.Add(river);
+            }
+
+            Rectangle overlay = CreateTileRectangle(map, t, 0.8);
+            if (t.Units.Count > 0)
+                overlay.Fill = new SolidColorBrush(Color.FromRgb(255, 0, 0));
+            else if (isSelected)
+                overlay.Fill = new SolidColorBrush(GetPrimaryColor(PlayerColors.PLAYERCOLOR_CYAN));
+            else if (visualizeClosestPlayers)
+            {
+                if (t.ClosestPlayer == -1)
+                    overlay.Fill = new SolidColorBrush(GetPrimaryColor(PlayerColors.PLAYERCOLOR_BLACK));
+                else
+                    overlay.Fill = new SolidColorBrush(GetPrimaryColor(_Model.Game.Players[t.ClosestPlayer].Color));
+            }
+            else
+                return;
+            uxMapGrid.Children.Add(overlay);
+        }
+
+        private Rectangle CreateTileRectangle(Map map, Tile t, double opacity)
         {
             Rectangle element = new Rectangle();
             element.Width = TileWidth;
             element.Height = TileHeight;
-            element.SetValue(Grid.RowProperty, _Model.Game.Map.Height - 1 - y);
-            element.SetValue(Grid.ColumnProperty, x);
+            element.SetValue(Grid.RowProperty, map.Height - 1 - t.Y);
+            element.SetValue(Grid.ColumnProperty, t.X);
             element.Opacity = opacity;
             return element;
         }
@@ -284,12 +308,12 @@ namespace MapEditor
 
         private void UpdateMap(bool resized)
         {
-            if(resized) uxMapScrollViewer.Width = uxMapScrollViewer.Height * _Model.Game.Map.Width / _Model.Game.Map.Height;
+            if (resized) uxMapScrollViewer.Width = uxMapScrollViewer.Height * GetMap().Width / GetMap().Height;
             ShowMap(false);
             if (resized)
             {
-                MapContainer.Width = _Model.Game.Map.Width * TileWidth;
-                MapContainer.Height = _Model.Game.Map.Height * TileHeight;
+                MapContainer.Width = GetMap().Width * TileWidth;
+                MapContainer.Height = GetMap().Height * TileHeight;
                 this.UpdateLayout();
                 ZoomSlider.Minimum = Math.Log(uxMapScrollViewer.ViewportWidth / MapContainer.ActualWidth, 1.3);
                 ZoomSlider.Maximum = Math.Max(10, ZoomSlider.Minimum + 5);
@@ -333,6 +357,7 @@ namespace MapEditor
         {
             try
             {
+                // TODO: Merge layers?
                 if (_Model.Game == null || _Model.Game.Map == null) return;
                 BalanceCheckerSettings settings = GetBalanceSettings();
                 BalanceReport report = BalanceChecker.CheckBalance(_Model.Game.Map, settings, null);
@@ -518,15 +543,15 @@ namespace MapEditor
                     int width = (int)Math.Ceiling(rect.Width / TileWidth);
                     int height = (int)Math.Ceiling(rect.Height / TileHeight);
                     int left = (int)(Canvas.GetLeft(rect) / TileWidth);
-                    int top = _Model.Game.Map.Height - height - (int)(Canvas.GetTop(rect) / TileHeight);
-                    _Model.PerformLayerOperation(new GenericOperation<SelectionParameters>("Select tiles", _Model.Game.Map.SelectTiles, new SelectionParameters()
+                    int top = GetMap().Height - height - (int)(Canvas.GetTop(rect) / TileHeight);
+                    _Model.PerformSelectionOperation(new SelectionOperation()
                     {
-                        ClearSelection = false,
+                        Clear = false,
                         Left = left,
                         Top = top,
                         Width = width,
                         Height = height
-                    }));
+                    });
                     UpdateMap(false);
                     canvas.Children.Remove(rect);
                     rect = null;
@@ -611,7 +636,7 @@ namespace MapEditor
         {
             try
             {
-                _Model.PerformLayerOperation(new GenericOperation<RotateParameters>("Rotate clockwise", _Model.Game.Map.Rotate, new RotateParameters() { Clockwise = true }));
+                _Model.PerformLayerOperation(new RotateOperation() { Clockwise = true });
                 UpdateMap(true);
             }
             catch (Exception ex)
@@ -624,7 +649,7 @@ namespace MapEditor
         {
             try
             {
-                _Model.PerformLayerOperation(new GenericOperation<RotateParameters>("Rotate counter-clockwise", _Model.Game.Map.Rotate, new RotateParameters() { Clockwise = false }));
+                _Model.PerformLayerOperation(new RotateOperation() { Clockwise = false });
                 UpdateMap(true);
             }
             catch (Exception ex)
@@ -637,7 +662,7 @@ namespace MapEditor
         {
             try
             {
-                _Model.PerformLayerOperation(new GenericOperation<CropParameters>("Crop to selection", _Model.Game.Map.CropToSelection, new CropParameters()));
+                _Model.PerformLayerOperation(new CropOperation());
                 UpdateMap(true);
             }
             catch (Exception ex)
@@ -650,11 +675,11 @@ namespace MapEditor
         {
             try
             {
-                _Model.PerformLayerOperation(new GenericOperation<ScrambleParameters>("Scramble selection", _Model.Game.Map.ScrambleSelection, new ScrambleParameters()
+                _Model.PerformLayerOperation(new ScrambleOperation()
                 {
                     Distance = int.Parse(txtMaxScrambleDistance.Text),
                     DontScrambleWater = chkDontScrambleWater.IsChecked.Value
-                }));
+                });
                 UpdateMap(false);
             }
             catch (Exception ex)
@@ -667,7 +692,7 @@ namespace MapEditor
         {
             try
             {
-                _Model.PerformLayerOperation(new GenericOperation<ResizeParameters>("Resize", _Model.Game.Map.ExpandToSize, new ResizeParameters()
+                _Model.PerformLayerOperation(new ResizeOperation()
                 {
                     Width = int.Parse(txtResizeWidth.Text),
                     Height = int.Parse(txtResizeHeight.Text),
@@ -675,7 +700,7 @@ namespace MapEditor
                     PlotType = PlotTypes.FLAT,
                     HorAlign = (HorizontalNeighbour)int.Parse(((ComboBoxItem)cboHorizontalAlign.SelectedItem).Tag.ToString()),
                     VerAlign = (VerticalNeighbour)int.Parse(((ComboBoxItem)cboVerticalAlign.SelectedItem).Tag.ToString())
-                }));
+                });
                 UpdateMap(true);
             }
             catch (Exception ex)
@@ -708,11 +733,11 @@ namespace MapEditor
         {
             try
             {
-                _Model.PerformLayerOperation(new GenericOperation<RotateAroundCornerParameters>("Rotate around corner", _Model.Game.Map.RotateAroundCorner, new RotateAroundCornerParameters()
+                _Model.PerformLayerOperation(new RotateAroundCornerOperation()
                 {
                     LeftCorner = leftCorner,
                     TopCorner = topCorner
-                }));
+                });
                 UpdateMap(true);
             }
             catch (Exception ex)
@@ -725,7 +750,7 @@ namespace MapEditor
         {
             try
             {
-                _Model.PerformLayerOperation(new GenericOperation<MirrorParameters>("Mirror west", _Model.Game.Map.MirrorWest, new MirrorParameters()));
+                _Model.PerformLayerOperation(new MirrorOperation() { MirrorAroundEdge = MirrorOperation.MirrorEdge.West });
                 UpdateMap(true);
             }
             catch (Exception ex)
@@ -738,7 +763,7 @@ namespace MapEditor
         {
             try
             {
-                _Model.PerformLayerOperation(new GenericOperation<MirrorParameters>("Mirror east", _Model.Game.Map.MirrorEast, new MirrorParameters()));
+                _Model.PerformLayerOperation(new MirrorOperation() { MirrorAroundEdge = MirrorOperation.MirrorEdge.East });
                 UpdateMap(true);
             }
             catch (Exception ex)
@@ -751,7 +776,7 @@ namespace MapEditor
         {
             try
             {
-                _Model.PerformLayerOperation(new GenericOperation<MirrorParameters>("Mirror north", _Model.Game.Map.MirrorNorth, new MirrorParameters()));
+                _Model.PerformLayerOperation(new MirrorOperation() { MirrorAroundEdge = MirrorOperation.MirrorEdge.North });
                 UpdateMap(true);
             }
             catch (Exception ex)
@@ -764,7 +789,7 @@ namespace MapEditor
         {
             try
             {
-                _Model.PerformLayerOperation(new GenericOperation<MirrorParameters>("Mirror south", _Model.Game.Map.MirrorSouth, new MirrorParameters()));
+                _Model.PerformLayerOperation(new MirrorOperation() { MirrorAroundEdge = MirrorOperation.MirrorEdge.South });
                 UpdateMap(true);
             }
             catch (Exception ex)
@@ -777,10 +802,11 @@ namespace MapEditor
         {
             try
             {
-                _Model.PerformLayerOperation(new GenericOperation<RepeatParameters>("Repeat horizontally", _Model.Game.Map.RepeatHorizontally, new RepeatParameters()
+                _Model.PerformLayerOperation(new RepeatOperation()
                 {
+                    Vertically = false,
                     Times = int.Parse(txtRepeatHorTimes.Text)
-                }));
+                });
                 UpdateMap(true);
             }
             catch (Exception ex)
@@ -793,10 +819,11 @@ namespace MapEditor
         {
             try
             {
-                _Model.PerformLayerOperation(new GenericOperation<RepeatParameters>("Repeat vertically", _Model.Game.Map.RepeatVertically, new RepeatParameters()
+                _Model.PerformLayerOperation(new RepeatOperation()
                 {
+                    Vertically = true,
                     Times = int.Parse(txtRepeatVerTimes.Text)
-                }));
+                });
                 UpdateMap(true);
             }
             catch (Exception ex)
@@ -875,7 +902,7 @@ namespace MapEditor
         {
             try
             {
-                _Model.PerformLayerOperation(new GenericOperation<SelectionParameters>("Clear selection", _Model.Game.Map.ClearSelection, new SelectionParameters() { ClearSelection = true }));
+                _Model.PerformSelectionOperation(new SelectionOperation() { Clear = true });
                 UpdateMap(false);
                 _mouseMode = MouseMode.None;
                 canvas.Cursor = Cursors.Arrow;
@@ -937,6 +964,11 @@ namespace MapEditor
             MoveSelection,
             MoveSelected,
             MoveLayer
+        }
+
+        private void LayerVisible_Checked(object sender, RoutedEventArgs e)
+        {
+            ShowMap(false);
         }
 
     }

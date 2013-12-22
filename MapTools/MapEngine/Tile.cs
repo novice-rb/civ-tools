@@ -6,12 +6,36 @@ using System.Text;
 namespace MapEngine
 {
     [Serializable]
+    public class Coordinate
+    {
+        public int X { get; set; }
+        public int Y { get; set; }
+    }
+
+    [Serializable]
+    public class Selection : List<Coordinate>
+    {
+        public bool ContainsTile(Tile t)
+        {
+            foreach (var c in this)
+                if (c.X == t.X && c.Y == t.Y)
+                    return true;
+            return false;
+        }
+    }
+
+    [Serializable]
     public class Tile : ICloneable
     {
         public Tile()
         {
             Units = new List<Unit>();
             UnparsedData = new List<string>();
+        }
+
+        public Coordinate GetCoordinate()
+        {
+            return new Coordinate() { X = this.X, Y = this.Y };
         }
 
         public List<string> UnparsedData { get; set; }
@@ -30,7 +54,7 @@ namespace MapEngine
         public int ContinentId { get; set; }
         public FreshWaterTypes FreshWaterType { get; set; }
         public IrrigationStatus IrrigationStatus { get; set; }
-        public bool Selected { get; set; }
+        //public bool Selected { get; set; }
         public bool IsEmpty { get; set; }
         public bool WaterBodyContainsResources { get; set; }
         public bool WaterBodySupportsShips { get; set; }

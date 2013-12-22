@@ -156,6 +156,7 @@
                                         <StackPanel Orientation="Horizontal">
                                             <Button Content="Move up"></Button>
                                             <Button Content="Move down"></Button>
+                                            <CheckBox Content="Visible" IsChecked="{Binding Visible, Mode=TwoWay}" Unchecked="LayerVisible_Checked" Checked="LayerVisible_Checked"></CheckBox>
                                         </StackPanel>
                                     </StackPanel>
                                 </DataTemplate>

@@ -21,10 +21,12 @@ namespace MapEditor
             set
             {
                 _Game = value;
+                State.Selection = new Selection();
                 State.Layers = new ObservableCollection<Layer>();
                 State.ActiveLayer = new Layer();
                 State.ActiveLayer.LayerName = "Map";
-                State.ActiveLayer.Map = value.Map;
+                State.ActiveLayer.Visible = true;
+                State.ActiveLayer.Map = _Game.Map;
                 State.Layers.Add(State.ActiveLayer);
                 UndoHistory = new ObservableCollection<EditOperation>();
                 UndoHistory.Add(new EditOperation() { Name = "Open map", StateAfterOperation = State });
@@ -54,8 +56,25 @@ namespace MapEditor
         public void PerformMapOperation(MapOperation operation)
         {
             UndoHistory[UndoIndex].StateAfterOperation = State.Clone();
-            State = operation.Execute(State);
-            Game.Map = State.ActiveLayer.Map;
+            State = operation.Execute(State, State.Selection);
+            AddEditHistoryEntry(operation.GetName());
+        }
+
+        public void PerformLayerOperation(MapLayerOperation operation)
+        {
+            UndoHistory[UndoIndex].StateAfterOperation = State.Clone();
+            foreach (var lyr in State.Layers)
+            {
+                lyr.Map = operation.Execute(lyr.Map, State.Selection);
+            }
+            State.Selection = operation.CreateNewSelection(State.Selection);
+            AddEditHistoryEntry(operation.GetName());
+        }
+
+        public void PerformSelectionOperation(MapSelectOperation operation)
+        {
+            UndoHistory[UndoIndex].StateAfterOperation = State.Clone();
+            State.Selection = operation.Execute(State.ActiveLayer.Map, State.Selection);
             AddEditHistoryEntry(operation.GetName());
         }
 
@@ -69,17 +88,6 @@ namespace MapEditor
             UndoHistory.Add(op);
         }
 
-        public void PerformLayerOperation(MapLayerOperation operation)
-        {
-            UndoHistory[UndoIndex].StateAfterOperation = State.Clone();
-            foreach (var lyr in State.Layers)
-            {
-                lyr.Map = operation.Execute(lyr.Map);
-            }
-            Game.Map = State.ActiveLayer.Map;
-            AddEditHistoryEntry(operation.GetName());
-        }
-
         public bool UndoTo(int index)
         {
             if (index < 0) throw new ArgumentOutOfRangeException();
@@ -87,7 +95,6 @@ namespace MapEditor
             if (UndoIndex == index) return false;
             UndoIndex = index;
             State = UndoHistory[UndoIndex].StateAfterOperation;
-            Game.Map = State.ActiveLayer.Map;
             return true;
         }
     }

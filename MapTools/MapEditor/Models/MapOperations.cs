@@ -8,25 +8,25 @@ namespace MapEditor
 {
     public abstract class MapOperation
     {
-        public abstract MapState Execute(MapState state);
+        public abstract MapState Execute(MapState state, Selection selection);
         public abstract string GetName();
     }
 
     public class CopyToNewLayerOperation : MapOperation
     {
-        public override MapState Execute(MapState state)
+        public override MapState Execute(MapState state, Selection selection)
         {
-            var selection = state.ActiveLayer.Map.GetAllTiles().Where(t => t.Selected).ToList();
-            var newLayer = new Layer() { LayerName = "New layer", Map = (Map)state.ActiveLayer.Map.Clone() };
+            var newLayer = new Layer() { LayerName = "New layer", Map = (Map)state.ActiveLayer.Map.Clone(), Visible=true };
             foreach (var tile in newLayer.Map.GetAllTiles())
             {
-                if (!tile.Selected)
-                {
-                    tile.IsEmpty = true;
-                }
+                tile.IsEmpty = true;
+                foreach (var c in selection)
+                    if (c.X == tile.X && c.Y == tile.Y)
+                        tile.IsEmpty = false;
             }
-            state.ActiveLayer.Map.ClearSelection(new MapEngine.Parameters.SelectionParameters() { ClearSelection = true });
+            state.Selection = new Selection();
             state.Layers.Insert(0, newLayer);
+            //state.ActiveLayer.Visible = false;
             state.ActiveLayer = state.Layers[0];
             return state;
         }

@@ -10,11 +10,13 @@ namespace MapEditor
     {
         public string LayerName { get; set; }
         public Map Map { get; set; }
+        public bool Visible { get; set; }
         public Layer Clone()
         {
             var lyr = new Layer();
             lyr.LayerName = (string)LayerName.Clone();
             lyr.Map = (Map)Map.Clone();
+            lyr.Visible = Visible;
             return lyr;
         }
     }

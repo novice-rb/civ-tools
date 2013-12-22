@@ -3,40 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Collections;
-using MapEngine.Parameters;
 
 namespace MapEngine
 {
-    public abstract class MapLayerOperation
-    {
-        public abstract Map Execute(Map map);
-        public abstract string GetName();
-    }
-
-    public class GenericOperation<T> : MapLayerOperation
-    {
-        protected T _parameters;
-        protected string _name;
-        protected Func<T, Map> _method;
-
-        public GenericOperation(string name, Func<T, Map> method, T parameters)
-        {
-            _name = name;
-            _method = method;
-            _parameters = parameters;
-        }
-
-        public override Map Execute(Map map)
-        {
-            return _method.Invoke(_parameters);
-        }
-
-        public override string GetName()
-        {
-            return _name;
-        }
-    }
-
     [Serializable]
     public class Map : ICloneable
     {
@@ -77,341 +46,11 @@ namespace MapEngine
             return Dist;
         }
 
-        public Map RotateCCW()
-        {
-            Map map = new Map();
-            map.SetDimensions(this.Height, this.Width);
-            map.IsHorizontalWrap = this.IsVerticalWrap;
-            map.IsVerticalWrap = this.IsHorizontalWrap;
-            map.UnparsedData = new List<string>(this.UnparsedData);
-            foreach (Tile t in this.GetAllTiles())
-            {
-                map.SetTile(map.Width - 1 - t.Y, t.X, (Tile)t.Clone());
-            }
-            Map map2 = (Map)map.Clone();
-            foreach (Tile t in map2.GetAllTiles())
-            {
-                t.IsWOfRiver = false;
-                t.IsNOfRiver = false;
-            }
-            foreach (Tile t in map.GetAllTiles())
-            {
-                if (t.IsNOfRiver)
-                {
-                    Tile tt = map2.GetTile(t.X, t.Y);
-                    tt.IsWOfRiver = true;
-                    if (t.RiverWEDirection == RiverDirection.WEST_TO_EAST)
-                        tt.RiverNSDirection = RiverDirection.SOUTH_TO_NORTH;
-                    else
-                        tt.RiverNSDirection = RiverDirection.NORTH_TO_SOUTH;
-                }
-                if (t.IsWOfRiver)
-                {
-                    Tile n = map2.GetNeighbour(t.X, t.Y, HorizontalNeighbour.None, VerticalNeighbour.North);
-                    if (n != null)
-                    {
-                        n.IsNOfRiver = true;
-                        if (t.RiverNSDirection == RiverDirection.NORTH_TO_SOUTH)
-                            n.RiverWEDirection = RiverDirection.WEST_TO_EAST;
-                        else
-                            n.RiverWEDirection = RiverDirection.EAST_TO_WEST;
-                    }
-                }
-            }
-            return map2;
-        }
-
-        public Map Rotate(RotateParameters parameters)
-        {
-            if (parameters.Clockwise)
-                return RotateCW();
-            else
-                return RotateCCW();
-        }
-
-        public Map RotateCW()
-        {
-            Map map = new Map();
-            map.SetDimensions(this.Height, this.Width);
-            map.IsHorizontalWrap = this.IsVerticalWrap;
-            map.IsVerticalWrap = this.IsHorizontalWrap;
-            map.UnparsedData = new List<string>(this.UnparsedData);
-            foreach (Tile t in this.GetAllTiles())
-            {
-                map.SetTile(t.Y, map.Height - 1 - t.X, (Tile)t.Clone());
-            }
-            Map map2 = (Map)map.Clone();
-            foreach (Tile t in map2.GetAllTiles())
-            {
-                t.IsWOfRiver = false;
-                t.IsNOfRiver = false;
-            }
-            foreach (Tile t in map.GetAllTiles())
-            {
-                if (t.IsNOfRiver)
-                {
-                    Tile w = map2.GetNeighbour(t.X, t.Y, HorizontalNeighbour.West, VerticalNeighbour.None);
-                    if (w != null)
-                    {
-                        w.IsWOfRiver = true;
-                        if (t.RiverWEDirection == RiverDirection.WEST_TO_EAST)
-                            w.RiverNSDirection = RiverDirection.NORTH_TO_SOUTH;
-                        else
-                            w.RiverNSDirection = RiverDirection.SOUTH_TO_NORTH;
-                    }
-                }
-                if (t.IsWOfRiver)
-                {
-                    Tile tt = map2.GetTile(t.X, t.Y);
-                    tt.IsNOfRiver = true;
-                    if (t.RiverNSDirection == RiverDirection.NORTH_TO_SOUTH)
-                        tt.RiverWEDirection = RiverDirection.EAST_TO_WEST;
-                    else
-                        tt.RiverWEDirection = RiverDirection.WEST_TO_EAST;
-                }
-            }
-            return map2;
-        }
-
-        public Map ScrambleSelection(ScrambleParameters parameters)
-        {
-            Map map = (Map)this.Clone();
-            var unswappedTiles = map.GetAllTiles().Where(t => t.Selected && !(t.IsWater() && parameters.DontScrambleWater)).ToList();
-            unswappedTiles = Utility.ShuffleList(unswappedTiles);
-            Dictionary<Tile, Tile> swaps = new Dictionary<Tile, Tile>();
-            while (unswappedTiles.Count > 0)
-            {
-                var tileToSwap = unswappedTiles[0];
-                Tile tileToSwapWith = null;
-                for (var i = 1; i < unswappedTiles.Count; i++)
-                {
-                    var t = unswappedTiles[i];
-                    if (map.GetDistanceBetween(t.X, t.Y, tileToSwap.X, tileToSwap.Y) <= parameters.Distance)
-                    {
-                        tileToSwapWith = t;
-                        break;
-                    }
-                }
-                if (tileToSwapWith != null)
-                {
-                    swaps[tileToSwap] = tileToSwapWith;
-                    unswappedTiles.Remove(tileToSwapWith);
-                }
-                unswappedTiles.Remove(tileToSwap);
-            }
-            foreach (var tile in swaps.Keys)
-            {
-                Utility.SwapTiles(tile, swaps[tile]);
-            }
-            map.CalculateFreshWater();
-            map.CalculateIrrigationStatus();
-            map.AssignContinentIds();
-            return map;
-        }
-
-        public Map ClearSelection(SelectionParameters parameters)
-        {
-            Map map = (Map)this.Clone();
-            foreach (var t in map.GetAllTiles())
-                t.Selected = false;
-            return map;
-        }
-
-        public Map CropToSelection(CropParameters parameters)
-        {
-            int minX = int.MaxValue; int maxX = int.MinValue; int minY = int.MaxValue; int maxY = int.MinValue;
-            foreach (Tile t in this.GetAllTiles())
-            {
-                if (t.Selected)
-                {
-                    minX = Math.Min(minX, t.X);
-                    minY = Math.Min(minY, t.Y);
-                    maxX = Math.Max(maxX, t.X);
-                    maxY = Math.Max(maxY, t.Y);
-                }
-            }
-            Map map = (Map)this.Clone();
-            if (minX == int.MaxValue) return map; // return uncropped map if no selected tiles
-            map.SetDimensions(maxX - minX + 1, maxY - minY + 1);
-            for (int x = minX; x <= maxX; x++)
-            {
-                for (int y = minY; y <= maxY; y++)
-                {
-                    Tile t = (Tile)this.GetTile(x, y).Clone();
-                    t.Selected = false;
-                    map.SetTile(x - minX, y - minY, t);
-                }
-            }
-            return map;
-        }
-
-        public Map RotateAroundCorner(RotateAroundCornerParameters parameters)
-        {
-            Map map = this;
-            if (map.Width != map.Height) map = map.ExpandToSize(new ResizeParameters()
-            {
-                Width = Math.Min(map.Width, map.Height),
-                Height = Math.Min(map.Width, map.Height),
-                TerrainType = TerrainTypes.TERRAIN_GRASS,
-                PlotType = PlotTypes.FLAT,
-                HorAlign = HorizontalNeighbour.None,
-                VerAlign = VerticalNeighbour.None
-            });
-            Map topLeft = null, topRight = null, bottomLeft = null, bottomRight = null;
-            if (parameters.LeftCorner)
-            {
-                if (parameters.TopCorner)
-                {
-                    // Rotate around top left corner
-                    bottomRight = map;
-                    bottomLeft = bottomRight.RotateCW();
-                    topLeft = bottomLeft.RotateCW();
-                    topRight = topLeft.RotateCW();
-                }
-                else
-                {
-                    // Rotate around bottom left corner
-                    topRight = map;
-                    bottomRight = topRight.RotateCW();
-                    bottomLeft = bottomRight.RotateCW();
-                    topLeft = bottomLeft.RotateCW();
-                }
-            }
-            else
-            {
-                if (parameters.TopCorner)
-                {
-                    // Rotate around top right corner
-                    bottomLeft = map;
-                    topLeft = bottomLeft.RotateCW();
-                    topRight = topLeft.RotateCW();
-                    bottomRight = topRight.RotateCW();
-                }
-                else
-                {
-                    // Rotate around bottom right corner
-                    topLeft = map;
-                    topRight = topLeft.RotateCW();
-                    bottomRight = topRight.RotateCW();
-                    bottomLeft = bottomRight.RotateCW();
-                }
-            }
-            Map r = (Map)map.Clone();
-            r.SetDimensions(map.Width * 2, map.Height * 2);
-            r.SetTiles(bottomRight, map.Width, 0);
-            r.SetTiles(bottomLeft, 0, 0);
-            r.SetTiles(topLeft, 0, map.Height);
-            r.SetTiles(topRight, map.Width, map.Height);
-            return r;
-        }
-
         public void SetTiles(Map map, int minX, int minY)
         {
             for (int x = minX; x < minX + map.Width; x++)
                 for (int y = minY; y < minY + map.Height; y++)
                     this.SetTile(x, y, (Tile)map.GetTile(x - minX, y - minY).Clone());
-        }
-
-        public Map MirrorEast(MirrorParameters parameters)
-        {
-            Map map = (Map)this.Clone();
-            map.SetDimensions(this.Width * 2, this.Height);
-            for (int x = 0; x < this.Width; x++)
-            {
-                for (int y = 0; y < this.Height; y++)
-                {
-                    Tile t = this.GetTile(x, y);
-                    map.SetTile(x, y, (Tile)t.Clone());
-                    map.SetTile(map.Width-1-x, y, (Tile)t.Clone());
-                }
-            }
-            map.FlipRiversHorizontally(this.Width, map.Width - 1);
-            return map;
-        }
-
-        public Map MirrorWest(MirrorParameters parameters)
-        {
-            Map map = (Map)this.Clone();
-            map.SetDimensions(this.Width * 2, this.Height);
-            for (int x = 0; x < this.Width; x++)
-            {
-                for (int y = 0; y < this.Height; y++)
-                {
-                    Tile t = this.GetTile(x, y);
-                    map.SetTile(this.Width + x, y, (Tile)t.Clone());
-                    map.SetTile(this.Width - 1 - x, y, (Tile)t.Clone());
-                }
-            }
-            map.FlipRiversHorizontally(0, this.Width - 1);
-            return map;
-        }
-
-        public Map RepeatHorizontally(RepeatParameters parameters)
-        {
-            if (parameters.Times < 2) return this;
-            Map map = (Map)this.Clone();
-            map.SetDimensions(this.Width * parameters.Times, this.Height);
-            for (int x = 0; x < this.Width; x++)
-            {
-                for (int y = 0; y < this.Height; y++)
-                {
-                    Tile t = this.GetTile(x, y);
-                    for (int r = 0; r < parameters.Times; r++)
-                        map.SetTile(x + r*this.Width, y, (Tile)t.Clone());
-                }
-            }
-            return map;
-        }
-
-        public Map RepeatVertically(RepeatParameters parameters)
-        {
-            if (parameters.Times < 2) return this;
-            Map map = (Map)this.Clone();
-            map.SetDimensions(this.Width, this.Height * parameters.Times);
-            for (int x = 0; x < this.Width; x++)
-            {
-                for (int y = 0; y < this.Height; y++)
-                {
-                    Tile t = this.GetTile(x, y);
-                    for (int r = 0; r < parameters.Times; r++)
-                        map.SetTile(x, y + r * this.Height, (Tile)t.Clone());
-                }
-            }
-            return map;
-        }
-
-        public Map MirrorNorth(MirrorParameters parameters)
-        {
-            Map map = (Map)this.Clone();
-            map.SetDimensions(this.Width, this.Height * 2);
-            for (int x = 0; x < this.Width; x++)
-            {
-                for (int y = 0; y < this.Height; y++)
-                {
-                    Tile t = this.GetTile(x, y);
-                    map.SetTile(x, y, (Tile)t.Clone());
-                    map.SetTile(x, map.Height - 1 - y, (Tile)t.Clone());
-                }
-            }
-            map.FlipRiversVertically(this.Height, map.Height - 1);
-            return map;
-        }
-
-        public Map MirrorSouth(MirrorParameters parameters)
-        {
-            Map map = (Map)this.Clone();
-            map.SetDimensions(this.Width, this.Height * 2);
-            for (int x = 0; x < this.Width; x++)
-            {
-                for (int y = 0; y < this.Height; y++)
-                {
-                    Tile t = this.GetTile(x, y);
-                    map.SetTile(x, this.Height + y, (Tile)t.Clone());
-                    map.SetTile(x, this.Height - 1 - y, (Tile)t.Clone());
-                }
-            }
-            map.FlipRiversVertically(0, this.Height - 1);
-            return map;
         }
 
         public void FlipRiversVertically(int minY, int maxY)
@@ -468,42 +107,6 @@ namespace MapEngine
                 case RiverDirection.SOUTH_TO_NORTH: return RiverDirection.NORTH_TO_SOUTH;
                 default: return 0;
             }
-        }
-
-        public Map ExpandToSize(ResizeParameters parameters)
-        {
-            Map map = (Map)this.Clone();
-            map.SetDimensions(parameters.Width, parameters.Height);
-            for (int x = 0; x < parameters.Width; x++)
-            {
-                for (int y = 0; y < parameters.Height; y++)
-                {
-                    Tile t = new Tile();
-                    t.PlotType = parameters.PlotType;
-                    t.Terrain = parameters.TerrainType;
-                    map.SetTile(x, y, t);
-                }
-            }
-            int minX = 0; // west alignment
-            int minY = 0; // south alignment
-            if (parameters.HorAlign == HorizontalNeighbour.None) // center alignment
-                minX = (this.Width - parameters.Width) / 2;
-            else if (parameters.HorAlign == HorizontalNeighbour.East)
-                minX = this.Width - parameters.Width;
-            if (parameters.VerAlign == VerticalNeighbour.None) // center alignment
-                minY = (this.Height - parameters.Height) / 2;
-            else if (parameters.VerAlign == VerticalNeighbour.North)
-                minY = this.Height - parameters.Height;
-            for (int x = minX; x < minX + parameters.Width; x++)
-            {
-                for (int y = minY; y < minY + parameters.Height; y++)
-                {
-                    Tile t = (Tile)this.GetTileAcrossWrap(x, y, false, false);
-                    if(t != null)
-                        map.SetTile(x - minX, y - minY, t);
-                }
-            }
-            return map;
         }
 
         public bool IsRiverSide(int x, int y)
@@ -571,22 +174,22 @@ namespace MapEngine
             Height = height;
         }
 
-        private Tile GetNeighbour(Tile t, HorizontalNeighbour h, VerticalNeighbour v)
+        public Tile GetNeighbour(Tile t, HorizontalNeighbour h, VerticalNeighbour v)
         {
             return GetNeighbour(t.X, t.Y, h, v);
         }
 
-        private Tile GetNeighbour(int x, int y, HorizontalNeighbour h, VerticalNeighbour v)
+        public Tile GetNeighbour(int x, int y, HorizontalNeighbour h, VerticalNeighbour v)
         {
             return GetTileAcrossWrap(x + (int)h, y + (int)v);
         }
 
-        private Tile GetTileAcrossWrap(int x, int y)
+        public Tile GetTileAcrossWrap(int x, int y)
         {
             return GetTileAcrossWrap(x, y, IsHorizontalWrap, IsVerticalWrap);
         }
 
-        private Tile GetTileAcrossWrap(int x, int y, bool isHorizontalWrap, bool isVerticalWrap)
+        public Tile GetTileAcrossWrap(int x, int y, bool isHorizontalWrap, bool isVerticalWrap)
         {
             while (x < 0)
             {
@@ -774,18 +377,6 @@ namespace MapEngine
         private void AddTileIfNotNull(List<Tile> tiles, Tile t)
         {
             if (t != null) tiles.Add(t);
-        }
-
-        public Map SelectTiles(SelectionParameters parameters)
-        {
-            Map map = (Map)this.Clone();
-            for (int x = parameters.Left; x < parameters.Left + parameters.Width; x++)
-                for (int y = parameters.Top; y < parameters.Top + parameters.Height; y++)
-                {
-                    Tile t = map.GetTileAcrossWrap(x, y);
-                    if (t != null) t.Selected = true;
-                }
-            return map;
         }
 
         #region ICloneable Members
