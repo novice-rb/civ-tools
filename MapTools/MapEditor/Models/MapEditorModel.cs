@@ -53,6 +53,46 @@ namespace MapEditor
             Title = "MapTuner build " + name.Version.ToString();
         }
 
+        private Map MergeLayers()
+        {
+            Map map = (Map)State.Layers.Last().Map.Clone();
+            foreach (var tile in map.GetAllTiles())
+                tile.IsEmpty = true;
+            var lyrs = new List<Layer>(State.Layers);
+            lyrs.Reverse();
+            foreach (var lyr in lyrs)
+            {
+                if (!lyr.Visible) continue;
+                foreach (var tile in lyr.Map.GetAllTiles())
+                {
+                    if (!tile.IsEmpty && map.GetTile(tile.X, tile.Y).IsEmpty)
+                        map.SetTile(tile.X, tile.Y, tile);
+                }
+            }
+            foreach (var tile in map.GetAllTiles())
+            {
+                if (tile.IsEmpty)
+                {
+                    tile.IsEmpty = false;
+                    tile.Terrain = TerrainTypes.TERRAIN_SNOW;
+                    tile.Units = new List<Unit>();
+                    tile.PlotType = PlotTypes.FLAT;
+                    tile.FeatureType = FeatureTypes.FEATURE_NONE;
+                    tile.FeatureVariety = 0;
+                    tile.BonusType = BonusTypes.BONUS_NONE;
+                    tile.IsNOfRiver = false;
+                    tile.IsWOfRiver = false;
+                }
+            }
+            return map;
+        }
+
+        public void SaveGame(string filename)
+        {
+            Game.Map = MergeLayers();
+            WorldBuilderParser.ToWorldbuilderFile(Game, filename);
+        }
+
         public void PerformMapOperation(MapOperation operation)
         {
             UndoHistory[UndoIndex].StateAfterOperation = State.Clone();

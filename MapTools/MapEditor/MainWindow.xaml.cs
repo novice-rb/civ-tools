@@ -333,7 +333,7 @@ namespace MapEditor
                 Nullable<bool> result = dlg.ShowDialog();
                 if (result == true)
                 {
-                    WorldBuilderParser.ToWorldbuilderFile(_Model.Game, dlg.FileName);
+                    _Model.SaveGame(dlg.FileName);
                     MessageBox.Show("Map saved successfully.", "Save complete");
                 }
             }
