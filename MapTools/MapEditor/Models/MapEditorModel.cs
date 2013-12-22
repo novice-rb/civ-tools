@@ -58,9 +58,7 @@ namespace MapEditor
             Map map = (Map)State.Layers.Last().Map.Clone();
             foreach (var tile in map.GetAllTiles())
                 tile.IsEmpty = true;
-            var lyrs = new List<Layer>(State.Layers);
-            lyrs.Reverse();
-            foreach (var lyr in lyrs)
+            foreach (var lyr in State.Layers)
             {
                 if (!lyr.Visible) continue;
                 foreach (var tile in lyr.Map.GetAllTiles())
