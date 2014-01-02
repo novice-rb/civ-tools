@@ -148,7 +148,7 @@
                     <Slider Name="ZoomSlider" Orientation="Vertical" Value="5" Minimum="1" Maximum="10" ValueChanged="ZoomSlider_ValueChanged" />
                     <StackPanel>
                         <TextBlock Text="Layers"></TextBlock>
-                        <ListBox x:Name="LayerList" Width="200">
+                        <ListBox x:Name="LayerList" Width="200" MaxHeight="400">
                             <ListBox.ItemTemplate>
                                 <DataTemplate>
                                     <StackPanel>
@@ -165,7 +165,7 @@
                     </StackPanel>
                     <StackPanel>
                         <TextBlock Text="Edit history"></TextBlock>
-                        <ListBox x:Name="UndoHistory" Width="200" SelectionChanged="UndoHistory_SelectionChanged">
+                        <ListBox x:Name="UndoHistory" Width="200"  MaxHeight="400" SelectionChanged="UndoHistory_SelectionChanged">
                             <ListBox.ItemTemplate>
                                 <DataTemplate>
                                     <StackPanel>

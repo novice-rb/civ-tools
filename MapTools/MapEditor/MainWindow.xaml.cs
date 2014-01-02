@@ -474,6 +474,9 @@ namespace MapEditor
                     canvas.Children.Add(rect);
                     canvas.Cursor = Cursors.Cross;
                 }
+                else if (_mouseMode == MouseMode.MoveLayer)
+                {
+                }
             }
             catch (Exception ex)
             {
@@ -485,19 +488,16 @@ namespace MapEditor
         {
             try
             {
-                if (e.LeftButton == MouseButtonState.Released || rect == null)
+                if (e.LeftButton == MouseButtonState.Released)
                     return;
-
                 var pos = e.GetPosition(canvas);
-
-                var x = Math.Min(pos.X, startPoint.X);
-                var y = Math.Min(pos.Y, startPoint.Y);
-
-                var w = Math.Max(pos.X, startPoint.X) - x;
-                var h = Math.Max(pos.Y, startPoint.Y) - y;
-
                 if (_mouseMode == MouseMode.SelectTiles)
                 {
+                    if (rect == null) return;
+                    var x = Math.Min(pos.X, startPoint.X);
+                    var y = Math.Min(pos.Y, startPoint.Y);
+                    var w = Math.Max(pos.X, startPoint.X) - x;
+                    var h = Math.Max(pos.Y, startPoint.Y) - y;
                     rect.Width = w;
                     rect.Height = h;
 
@@ -514,7 +514,17 @@ namespace MapEditor
                 }
                 else if (_mouseMode == MouseMode.MoveLayer)
                 {
-                    // TODO
+                    int deltaX = (int)Math.Round((pos.X - startPoint.X) / TileWidth);
+                    int deltaY = 0 - (int)Math.Round((pos.Y - startPoint.Y) / TileHeight);
+                    if (deltaX != 0 || deltaY != 0)
+                    {
+                        startPoint = pos;
+                        _Model.PerformMapOperation(new MoveLayerOperation()
+                        {
+                            DeltaX = deltaX, DeltaY = deltaY
+                        });
+                        UpdateMap(true);
+                    }
                 }
             }
             catch (Exception ex)
@@ -941,13 +951,13 @@ namespace MapEditor
 
         private void btnMoveLayer_Click(object sender, RoutedEventArgs e)
         {
-            _mouseMode = MouseMode.MoveSelection;
+            _mouseMode = MouseMode.MoveLayer;
             canvas.Cursor = Cursors.SizeAll;
         }
 
         private void btnMoveSelected_Click(object sender, RoutedEventArgs e)
         {
-            _mouseMode = MouseMode.MoveSelection;
+            _mouseMode = MouseMode.MoveSelected;
             canvas.Cursor = Cursors.SizeAll;
         }
 
